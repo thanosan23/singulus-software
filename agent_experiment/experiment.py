@@ -11,8 +11,9 @@ class ExperimentController:
         self.session = None
         self.survey_manager = SurveyManager()
         self.challenge_manager = ChallengeManager()
+        self.agents_per_group = 15
     
-    def setup_experiment(self, participant_count: int):
+    def setup_experiment(self, participant_count: int = 60):
         self.session = ExperimentSession(
             id=random.randint(1000, 9999),
             start_time=datetime.now()
@@ -36,9 +37,9 @@ class ExperimentController:
             Group(4, SpaceType.OPEN, False)
         ]
         
-        for agent in agents:
-            group = random.choice(groups)
-            group.participants.append(agent)
+        for i, agent in enumerate(agents):
+            group_idx = i // self.agents_per_group
+            groups[group_idx].participants.append(agent)
         
         self.session.groups = groups
     
@@ -64,7 +65,6 @@ class ExperimentController:
     def _execute_phase(self, phase: str, duration: int):
         self.session.current_phase = phase
         
-        # Update all agents
         for group in self.session.groups:
             environment = {"is_confined": group.space_type == SpaceType.CONFINED}
             for agent in group.participants:
@@ -84,13 +84,12 @@ class ExperimentController:
             decision = agent.make_decision(options, context)
             decisions.append(decision)
         
-        # Calculate success probability based on decisions and agent states
         collaboration_count = decisions.count("collaborate")
         leadership_seekers = decisions.count("seek_leadership")
         
         success_prob = (
-            collaboration_count * 0.2 +  # Collaboration bonus
-            leadership_seekers * 0.1 +  # Leadership bonus
+            collaboration_count * 0.2 +
+            leadership_seekers * 0.1 +
             (1 - sum(a.stress for a in group.participants)/len(group.participants)) * 0.3  # Stress penalty
         )
         
@@ -126,10 +125,9 @@ class ExperimentController:
 
 def main():
     controller = ExperimentController()
-    controller.setup_experiment(120)  # 120 participants
+    controller.setup_experiment(120)
     controller.run_experiment()
     
-    # Generate and display results
     analyzer = ExperimentAnalyzer(controller.session.groups)
     analyzer.plot_stress_distributions()
     print("Summary Statistics:", analyzer.generate_summary_statistics())

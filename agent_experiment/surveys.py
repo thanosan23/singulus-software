@@ -192,7 +192,6 @@ class SurveyManager:
                 parsed[q["id"]] = response if response else None
         return parsed
 
-# Helper function to analyze survey results
 def analyze_survey_results(responses: List[Dict[str, any]], survey: Survey) -> Dict[str, any]:
     analysis = {
         "survey_name": survey.name,

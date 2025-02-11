@@ -86,28 +86,21 @@ class AIAgent:
                 stress_floor = 45
                 social_impact = 0.4
             else:
-                # Open spaces are naturally less stressful
                 base_stress_rate = 1.0
                 stress_ceiling = 75
                 stress_floor = 25
                 social_impact = 0.2
             
-            # Exits affect how people perceive their environment
             if environment.get('has_exit'):
-                # Having an exit gives people a sense of control, reducing stress buildup
                 stress_accumulation = 0.7
                 recovery_rate = 1.3
             else:
-                # No exit increases feelings of being trapped
                 stress_accumulation = 1.4
                 recovery_rate = 0.8
-                stress_floor += 10  # Being trapped raises minimum stress
-            
-            # Calculate real-time stress changes
+                stress_floor += 10 
             social_support = len(self.social_connections) * social_impact
             isolation_factor = (1 - len(self.social_connections)/10) * 0.5
 
-            # Personality affects how one handles the situation
             stress_sensitivity = (
                 self.personality['neuroticism'] * 0.4 +
                 -self.personality['resilience'] * 0.4 +
@@ -115,10 +108,9 @@ class AIAgent:
                 self.personality['trauma_sensitivity'] * 0.3
             )
 
-            # Calculate stress change
             environmental_pressure = base_stress_rate * stress_accumulation
             if environment.get('crisis_event'):
-                environmental_pressure *= 1.5  # Crises amplify environmental stress
+                environmental_pressure *= 1.5 
 
             stress_change = (
                 environmental_pressure * stress_sensitivity +
@@ -126,28 +118,24 @@ class AIAgent:
                 isolation_factor
             )
 
-            # Add some randomness to represent daily variations
             stress_change += np.random.normal(0, 0.2)
             
-            # Update stress level within environment-specific bounds
             self.stress_level = int(np.clip(
                 self.stress_level + stress_change,
                 stress_floor,
                 stress_ceiling
             ))
 
-            # Update adaptation based on how well they're handling stress
             adaptation_delta = (
-                -abs(stress_change) * 0.5 +  # Negative impact from stress changes
-                social_support * 1.5 +        # Positive impact from social connections
-                (1 - self.stress_level/100) * 0.8  # Better adaptation when less stressed
+                -abs(stress_change) * 0.5 +
+                social_support * 1.5 + 
+                (1 - self.stress_level/100) * 0.8
             )
 
             self.adaptation_score = max(0, min(100,
                 self.adaptation_score + adaptation_delta
             ))
 
-            # Record state
             self.memory.append({
                 'timestamp': len(self.memory),
                 'environment': environment.copy(),
@@ -179,7 +167,6 @@ class AIAgent:
             return self._survey_cache[cache_key]
 
         try:
-            # Create a more detailed prompt for GPT
             env_type = 'Confined' if any(m['environment'].get('confined') for m in self.memory[-5:]) else 'Open'
             has_exit = any(m['environment'].get('has_exit') for m in self.memory[-5:])
 
@@ -199,20 +186,18 @@ Survey Questions:
 {chr(10).join([f"{q['id']}: {q['text']}" for q in survey.questions])}"""
 
             response = client.chat.completions.create(model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an AI agent participating in a space psychology experiment. Provide realistic, psychologically consistent responses that reflect your current state and personality."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.8,
-            max_tokens=1000)
+                messages=[
+                    {"role": "system", "content": "You are an AI agent participating in a space psychology experiment. Provide realistic, psychologically consistent responses that reflect your current state and personality."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.8,
+            max_tokens=500)
 
-            # Parse and format responses
             result = {}
             text = response.choices[0].message.content
             for question in survey.questions:
                 qid = question["id"]
                 if question["type"] == "likert_7":
-                    # Extract numerical responses for Likert questions
                     for line in text.split('\n'):
                         if qid in line:
                             try:
@@ -225,11 +210,10 @@ Survey Questions:
                     if qid not in result:
                         result[qid] = str(self._generate_likert_response(question["text"]))
                 else:
-                    # Extract open-ended responses
                     for line in text.split('\n'):
                         if qid in line and ':' in line:
                             answer = line.split(':', 1)[1].strip()
-                            if len(answer) > 10:  # Ensure we got a real response
+                            if len(answer) > 10:
                                 result[qid] = answer
                                 break
                     if qid not in result:
@@ -255,7 +239,7 @@ Survey Questions:
         recent_experiences = [
             {
                 'environment': m['environment'],
-                'connections': m['connections']  # Access connections directly
+                'connections': m['connections']
             }
             for m in self.memory[-5:]
         ] if self.memory else []
@@ -275,14 +259,12 @@ Survey Questions:
 
         for question in survey.questions:
             for line in lines:
-                # Match questions by ID or text
                 if question["id"] in line or question["text"] in line:
                     if ':' in line:
                         _, answer = line.split(':', 1)
                         responses[question["id"]] = answer.strip()
                         break
 
-            # Validate and clean responses
             if question["id"] not in responses:
                 if question["type"] == "likert_7":
                     responses[question["id"]] = str(self._generate_likert_response(question["text"]))
@@ -293,7 +275,7 @@ Survey Questions:
 
     def _generate_likert_response(self, question: str) -> int:
         """Generate contextually appropriate Likert responses"""
-        base_value = 4  # neutral starting point
+        base_value = 4
 
         if "stress" in question.lower():
             return max(1, min(7, int(self.stress_level / 15)))
