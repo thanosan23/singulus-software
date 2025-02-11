@@ -1,3 +1,5 @@
 .env
 __pycache__
 experiment_results
+wandb
+.DS_Store

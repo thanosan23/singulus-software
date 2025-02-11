@@ -1,6 +1,6 @@
 import numpy as np
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 from openai import OpenAI
 
 from torch import nn
@@ -52,19 +52,18 @@ class AIAgent:
         self.id = id
         self.openai_key = openai_key
         self.psych_state = PsychologicalState()
+        self.brain = AgentBrain(input_size=12, hidden_size=24, output_size=4)
         self.memory = []
         self.personality = self._generate_personality()
         self.social_connections = set()
         self.resources = random.randint(50, 100)
         self.adaptation_score = random.randint(60, 90)
-        self.stress_level = 0
+        self.stress_level = random.randint(25, 35)
         self.pre_survey = None
         self.survey_results = None
         self._state_lock = threading.Lock()
         self._survey_cache = {}
         self._memory_lock = threading.Lock()
-        self.base_stress = random.randint(25, 35)
-        self.stress_level = self.base_stress
 
     def _generate_personality(self) -> Dict[str, float]:
         return {
@@ -80,6 +79,9 @@ class AIAgent:
 
     def update_state(self, environment: Dict, social_context: Dict) -> None:
         with self._state_lock:
+            if not isinstance(self.social_connections, set):
+                self.social_connections = set(self.social_connections if hasattr(self, 'social_connections') else [])
+            
             if environment.get('confined'):
                 base_stress_rate = 2.0
                 stress_ceiling = 95
@@ -98,7 +100,7 @@ class AIAgent:
                 stress_accumulation = 1.4
                 recovery_rate = 0.8
                 stress_floor += 10 
-            social_support = len(self.social_connections) * social_impact
+            social_support = len(self.social_connections) if isinstance(self.social_connections, set) else 0
             isolation_factor = (1 - len(self.social_connections)/10) * 0.5
 
             stress_sensitivity = (
@@ -228,7 +230,6 @@ Survey Questions:
             return self._generate_fallback_responses(survey)
 
     def _create_simplified_context(self) -> str:
-        """Simplified context creation to reduce computation"""
         return json.dumps({
             'stress': self.psych_state.stress,
             'social_connections': len(self.social_connections),
@@ -253,7 +254,6 @@ Survey Questions:
         })
 
     def _parse_gpt_response(self, response: str, survey: Survey) -> Dict[str, str]:
-        """Parse GPT response into structured survey answers"""
         responses = {}
         lines = response.strip().split('\n')
 
@@ -274,7 +274,6 @@ Survey Questions:
         return responses
 
     def _generate_likert_response(self, question: str) -> int:
-        """Generate contextually appropriate Likert responses"""
         base_value = 4
 
         if "stress" in question.lower():
@@ -292,11 +291,52 @@ Survey Questions:
         for question in survey.questions:
             if question["type"] == "likert_7":
                 if "stress" in question["text"].lower():
-                    responses[question["id"]] = str(self.stress_level)
+                    responses[question["id"]] = str(min(7, max(1, round(self.stress_level / 15))))
+                elif "satisfaction" in question["text"].lower():
+                    satisfaction = (
+                        (1 - self.stress_level/100) * 0.4 +
+                        (self.adaptation_score/100) * 0.4 +
+                        len(self.social_connections)/10 * 0.2
+                    )
+                    responses[question["id"]] = str(min(7, max(1, round(satisfaction * 7))))
                 else:
-                    responses[question["id"]] = str(random.randint(1, 7))
+                    responses[question["id"]] = "4"
             else:
-                responses[question["id"]] = "No response available"
+                if "previous experience" in question["text"].lower():
+                    responses[question["id"]] = (
+                        "I have some experience with similar scenarios through simulations "
+                        "and training exercises, though this specific environment presents "
+                        "unique challenges."
+                    )
+                elif "concerns" in question["text"].lower():
+                    responses[question["id"]] = (
+                        f"As someone with {self.personality['extroversion']:.2f} extroversion "
+                        f"and {self.personality['neuroticism']:.2f} neuroticism, my main "
+                        "concerns relate to maintaining psychological well-being and "
+                        "adapting to the social dynamics of this environment."
+                    )
+                elif "performance" in question["text"].lower():
+                    impact = "significantly" if self.stress_level > 50 else "moderately"
+                    responses[question["id"]] = (
+                        f"The environment has {impact} affected my performance, requiring "
+                        "continuous adaptation and coping strategy development."
+                    )
+                elif "coping" in question["text"].lower():
+                    responses[question["id"]] = (
+                        "I've developed several coping strategies including mindfulness "
+                        "exercises, structured routines, and regular self-reflection to "
+                        "maintain psychological balance."
+                    )
+                elif "participate again" in question["text"].lower():
+                    willingness = "would" if self.adaptation_score > 75 else "would hesitate to"
+                    responses[question["id"]] = (
+                        f"I {willingness} participate in a similar experiment again, as this "
+                        "experience has provided valuable insights into personal resilience "
+                        "and adaptation capabilities."
+                    )
+                else:
+                    responses[question["id"]] = "Response based on ongoing experience and observations."
+        
         return responses
 
     def _generate_fallback_response(self, question: str) -> str:
@@ -308,3 +348,11 @@ Survey Questions:
             return str(random.randint(1, 7))
         else:
             return "No response available"
+
+    def _apply_space_solution(self, group: Dict):
+        if not self.enable_solution:
+            return
+        
+        for agent in group["participants"]:
+            if not hasattr(agent, 'social_connections') or not isinstance(agent.social_connections, set):
+                agent.social_connections = set()

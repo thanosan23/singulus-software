@@ -34,7 +34,7 @@ class Agent:
         self.role = None
         self.task_history = []
         
-    def update(self, environment: Dict, others: List['Agent']) -> Dict[str, float>:
+    def update(self, environment: Dict, others: List['Agent']) -> Dict[str, float]:
         confined_impact = 0.3 if environment.get('is_confined') else 0.05
         social_satisfaction = self._calculate_social_satisfaction(others)
         stress_change = self._calculate_stress_change(environment, social_satisfaction)
