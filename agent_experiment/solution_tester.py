@@ -66,7 +66,6 @@ class SolutionTester:
         plt.ylabel("Performance Score")
         plt.ylim(min(df["Performance"])-5, max(df["Performance"])+5)
         plt.savefig("experiment_results/solution_performance.png", bbox_inches='tight')
-        plt.show()
         print("Comparative graph saved to experiment_results/solution_performance.png")
 
 if __name__ == "__main__":

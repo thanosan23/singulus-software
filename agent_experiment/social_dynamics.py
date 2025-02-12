@@ -101,5 +101,3 @@ class SocialDynamicsManager:
             'centrality': nx.degree_centrality(self.social_graph),
             'communities': list(nx.community.greedy_modularity_communities(self.social_graph))
         }
-
-

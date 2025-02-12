@@ -35,7 +35,6 @@ class ExperimentAnalyzer:
         plt.xlabel("Stress Level")
         plt.ylabel("Frequency")
         plt.legend()
-        plt.show()
     
     def generate_summary_statistics(self) -> Dict:
         df = self.generate_stress_report()
@@ -76,4 +75,3 @@ class ExperimentAnalyzer:
                          verticalalignment='top')
         
         plt.tight_layout()
-        plt.show()
