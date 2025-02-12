@@ -1,6 +1,9 @@
-# NSS Space Settlement Contest Code
+# Singulus Code
+NSS Space Settlement Contest 2025
 
 ## Agent Experiment
+This experiment simulates the psychology of humans in space.
+
 To run the agent experiment, run the following code in the terminal:
 ```
 cd agent_experiment
