@@ -1,3 +1,4 @@
+from solution_tester import SolutionTester
 from datetime import datetime, timedelta
 import random
 from typing import List, Dict
@@ -26,6 +27,7 @@ except ImportError:
     WANDB_AVAILABLE = False
     print("Warning: wandb not installed. Running without tracking.")
 
+
 class ExperimentController:
     def __init__(self):
         self.start_time = None
@@ -39,7 +41,7 @@ class ExperimentController:
         self.thread_lock = threading.Lock()
         self.pbar = None
         print("Initializing Space Psychology Experiment Controller...")
-        self.phase_durations = { 
+        self.phase_durations = {
             "briefing": 0.5,
             "adaptation": 2.0,
             "resource_crisis": 3.0,
@@ -48,14 +50,14 @@ class ExperimentController:
             "resolution": 5.0
         }
         self.participants_per_group = 100
-        self.num_simulations = 3 
+        self.num_simulations = 3
         self.results_history = []
         self.use_rl = True
         self.wandb_logging = WANDB_AVAILABLE
-        self.enable_solution = True 
+        self.enable_solution = True
         self.solution_type = "adaptive_architecture"
-        self.solution_enabled = True 
-            
+        self.solution_enabled = True
+
     def initialize_experiment(self):
         if self.wandb_logging:
             try:
@@ -70,10 +72,10 @@ class ExperimentController:
             except Exception as e:
                 print(f"Failed to initialize wandb: {e}")
                 self.wandb_logging = False
-        
+
         self.groups = self.create_groups()
         self.start_time = datetime.now()
-        
+
         for group in self.groups:
             agents = [
                 AIAgent(
@@ -88,10 +90,10 @@ class ExperimentController:
             group["briefing_completed"] = False
             group["crisis_count"] = 0
             group["cooperation_score"] = 0
-            
+
             for agent in agents:
                 agent.social_connections = set()
-        
+
         if self.use_rl:
             for group in self.groups:
                 for agent in group["participants"]:
@@ -102,7 +104,7 @@ class ExperimentController:
                     )
                 if not hasattr(agent, 'social_connections') or not isinstance(agent.social_connections, set):
                     agent.social_connections = set()
-    
+
     def create_groups(self) -> List[Dict]:
         conditions = [
             {"space": "confined", "exit": True},
@@ -111,45 +113,47 @@ class ExperimentController:
             {"space": "open", "exit": False}
         ]
         return [{"id": i, "condition": c, "participants": [], "crisis_count": 0,
-                  "collective_resources": 1000, "avg_stress": 0.0, "success_rate": 0.0} 
+                 "collective_resources": 1000, "avg_stress": 0.0, "success_rate": 0.0}
                 for i, c in enumerate(conditions)]
-    
+
     def run_experiment(self):
         total_participants = len(self.groups) * self.participants_per_group
         print("\n=== Starting Space Psychology Experiment ===")
         print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"Total participants: {total_participants} ({self.participants_per_group} per group)")
+        print(f"Total participants: {total_participants} ({
+              self.participants_per_group} per group)")
         print("Initializing experiment setup...")
         self.initialize_experiment()
-        
+
         print("\n1. Conducting Pre-Experiment Surveys")
         with tqdm(total=total_participants, desc="Pre-Surveys") as pbar:
             for group in self.groups:
                 for agent in group["participants"]:
-                    responses = agent.take_survey(self.survey_manager.get_survey(SurveyType.PRE))
+                    responses = agent.take_survey(
+                        self.survey_manager.get_survey(SurveyType.PRE))
                     agent.pre_survey = responses
                     pbar.update(1)
-        
+
         print("\n2. Running Main Experiment")
         self.run_main_task()
-        
+
         print("\n3. Conducting Post-Experiment Surveys")
         self.conduct_post_surveys()
-        
+
         print("\n4. Processing Results")
         self.export_results()
-        
+
         print("\n=== Experiment Completed ===")
         print(f"Duration: {datetime.now() - self.start_time}")
         print("Results have been exported to 'experiment_results' directory")
-        
+
     def conduct_pre_surveys(self):
         survey = self.survey_manager.get_survey(SurveyType.PRE)
         for group in self.groups:
             for agent in group["participants"]:
                 responses = agent.take_survey(survey)
                 agent.pre_survey = responses
-    
+
     def run_main_task(self):
         timeline = [
             ("briefing", timedelta(minutes=30)),
@@ -159,7 +163,7 @@ class ExperimentController:
             ("major_crisis", timedelta(hours=3)),
             ("resolution", timedelta(hours=2))
         ]
-        
+
         total_participants = len(self.groups) * self.participants_per_group
         print("\nStarting experiment simulation...")
         try:
@@ -167,12 +171,12 @@ class ExperimentController:
                 for phase, duration in timeline:
                     tqdm.write(f"\nStarting phase: {phase}")
                     self.current_phase = phase
-                    
+
                     with tqdm(total=total_participants, desc=f"  {phase} progress", leave=False) as phase_pbar:
                         for group in self.groups:
                             self._process_group_phase(group, phase, duration)
                             phase_pbar.update(self.participants_per_group)
-                    
+
                     overall_pbar.update(1)
                     tqdm.write(f"Completed phase: {phase}")
         except KeyboardInterrupt:
@@ -188,7 +192,7 @@ class ExperimentController:
         decrease the agent's stress and boost its adaptation score proportionally.
         """
         elapsed = (datetime.now() - phase_start).total_seconds() / 60
-        window = 37 
+        window = 37
         if elapsed < window:
             factor = (window - elapsed) / window
             agent.stress_level *= (1 - 0.3 * factor)
@@ -200,7 +204,7 @@ class ExperimentController:
         with self.thread_lock:
             is_confined = group["condition"]["space"] == "confined"
             has_exit = group["condition"]["exit"]
-            
+
             environment = {
 
                 'confined': is_confined,
@@ -208,12 +212,12 @@ class ExperimentController:
                 'crisis_event': phase in ['resource_crisis', 'major_crisis'],
                 'phase': phase
             }
-            
+
             if phase == "resource_crisis":
                 environment['severity'] = 0.8
             elif phase == "major_crisis":
                 environment['severity'] = 0.9
-            
+
             for agent in group["participants"]:
                 others = [a for a in group["participants"] if a != agent]
                 social_context = {
@@ -221,7 +225,7 @@ class ExperimentController:
                     'others': others
                 }
                 agent.update_state(environment, social_context)
-            
+
             if phase == "briefing":
                 group["start_time"] = datetime.now()
                 for agent in group["participants"]:
@@ -237,15 +241,17 @@ class ExperimentController:
                         'adaptation_score': agent.adaptation_score,
                         'environment': environment
                     }
-                    
+
                     action = agent.rl_brain.select_action(state)
                     reward = self._calculate_reward(agent, action, environment)
-                    
+
                     next_state = state.copy()
-                    next_state.update(self._apply_action(agent, action, environment))
-                    
-                    agent.rl_brain.update(state, action, reward, next_state, False)
-                    
+                    next_state.update(self._apply_action(
+                        agent, action, environment))
+
+                    agent.rl_brain.update(
+                        state, action, reward, next_state, False)
+
                     if self.wandb_logging:
                         try:
                             metrics = agent.rl_brain.get_metrics()
@@ -267,14 +273,14 @@ class ExperimentController:
     def _calculate_reward(self, agent: AIAgent, action: int, environment: Dict) -> float:
         """Calculate reward for RL agent actions"""
         reward = 0
-        
+
         reward -= agent.stress_level * 0.01
-        
+
         reward += len(agent.social_connections) * 0.1
-        
+
         reward += agent.adaptation_score * 0.01
-        
-        if action == 0: 
+
+        if action == 0:
             reward += (100 - agent.stress_level) * 0.005
         elif action == 1:
             reward += len(agent.social_connections) * 0.2
@@ -282,9 +288,9 @@ class ExperimentController:
             reward += agent.adaptation_score * 0.015
         elif action == 3:
             reward += len(agent.social_connections) * 0.25
-        
+
         return reward
-    
+
     def _apply_action(self, agent: AIAgent, action: int, environment: Dict) -> Dict:
         """Apply selected action and return state changes"""
         changes = {
@@ -292,8 +298,8 @@ class ExperimentController:
             'social_connections': 0,
             'adaptation_score': 0
         }
-        
-        if action == 0: 
+
+        if action == 0:
             changes['stress_level'] = -5
         elif action == 1:
             changes['social_connections'] = 1
@@ -305,14 +311,14 @@ class ExperimentController:
             changes['social_connections'] = 2
             changes['adaptation_score'] = 1
             changes['stress_level'] = 1
-        
+
         return changes
 
     def _update_group_agents(self, group: Dict):
         """Update all agents in a group concurrently"""
         agents = group["participants"]
         is_confined = group["condition"]["space"] == "confined"
-        
+
         with ThreadPoolExecutor(max_workers=min(len(agents), self.max_workers)) as executor:
             futures = {}
             for agent in agents:
@@ -325,9 +331,10 @@ class ExperimentController:
                     'connections': list(agent.social_connections),
                     'others': others
                 }
-                future = executor.submit(agent.update_state, environment, social_context)
+                future = executor.submit(
+                    agent.update_state, environment, social_context)
                 futures[future] = agent
-            
+
             for future in as_completed(futures):
                 try:
                     future.result(timeout=10)
@@ -345,9 +352,9 @@ class ExperimentController:
             "major_crisis": self._handle_final_challenge,
             "resolution": self._handle_resolution
         }
-        
+
         if phase in phase_handlers:
-            with self.thread_lock: 
+            with self.thread_lock:
                 phase_handlers[phase]()
             self._update_group_agents(group)
 
@@ -359,28 +366,31 @@ class ExperimentController:
             {"type": "social_conflict", "severity": 0.4},
             {"type": "external_threat", "severity": 0.8}
         ]
-        
+
         crisis = random.choice(crisis_types)
         group["crisis_count"] += random.randint(1, 3)
-        
+
         agents = group["participants"]
-        avg_adaptation = sum(agent.adaptation_score for agent in agents) / len(agents)
+        avg_adaptation = sum(
+            agent.adaptation_score for agent in agents) / len(agents)
         avg_stress = sum(agent.stress_level for agent in agents) / len(agents)
-        cooperation = sum(len(agent.social_connections) for agent in agents) / len(agents)
-        
+        cooperation = sum(len(agent.social_connections)
+                          for agent in agents) / len(agents)
+
         space_modifier = 0.9 if group["condition"]["space"] == "confined" else 1.1
         exit_modifier = 1.1 if group["condition"]["exit"] else 0.95
-        
+
         base_success = (
             (avg_adaptation/100) * 0.35 +
             ((100 - avg_stress)/100) * 0.25 +
             (cooperation/15) * 0.2 +
             0.2
         )
-        
-        success_chance = base_success * space_modifier * exit_modifier * (1 - crisis["severity"] * 0.5)
+
+        success_chance = base_success * space_modifier * \
+            exit_modifier * (1 - crisis["severity"] * 0.5)
         success_chance = min(0.95, max(0.65, success_chance))
-        
+
         group["crisis_handled"] = random.random() < success_chance
 
     def _handle_briefing(self):
@@ -393,8 +403,9 @@ class ExperimentController:
     def _handle_initial_adaptation(self, group: Dict):
         """Handle adaptation phase for a specific group"""
         is_confined = group["condition"]["space"] == "confined"
-        tqdm.write(f"\nInitializing adaptation for Group {group['id']} ({group['condition']['space']})")
-        
+        tqdm.write(f"\nInitializing adaptation for Group {
+                   group['id']} ({group['condition']['space']})")
+
         for agent in group["participants"]:
             environment = {
                 'confined': is_confined,
@@ -406,8 +417,9 @@ class ExperimentController:
         """Handle resource management phase"""
         agents = group["participants"]
         total_available = group["collective_resources"]
-        tqdm.write(f"\nGroup {group['id']} managing resources. Available: {total_available}")
-        
+        tqdm.write(f"\nGroup {group['id']} managing resources. Available: {
+                   total_available}")
+
         for agent in group["participants"]:
             shared = agent.share_resources()
             group["collective_resources"] += shared
@@ -416,35 +428,40 @@ class ExperimentController:
     def _handle_final_challenge(self, group: Dict):
         """Handle final challenge phase"""
         agents = group["participants"]
-        avg_adaptation = sum(agent.adaptation_score for agent in agents) / len(agents)
+        avg_adaptation = sum(
+            agent.adaptation_score for agent in agents) / len(agents)
         avg_stress = sum(agent.stress_level for agent in agents) / len(agents)
-        cooperation = sum(len(agent.social_connections) for agent in agents) / len(agents)
-        
+        cooperation = sum(len(agent.social_connections)
+                          for agent in agents) / len(agents)
+
         success_chance = (
             avg_adaptation * 0.4 +
             (100 - avg_stress) * 0.3 +
             cooperation * 0.3
         ) / 100.0
-        
+
         group["final_score"] = success_chance * 100
-        tqdm.write(f"\nGroup {group['id']} final challenge result: {success_chance:.2%}")
+        tqdm.write(f"\nGroup {group['id']} final challenge result: {
+                   success_chance:.2%}")
 
     def _handle_resolution(self):
         """Handle resolution phase"""
         try:
             for group in self.groups:
                 group["end_time"] = datetime.now()
-                duration = (group["end_time"] - group["start_time"]).total_seconds() / 3600
+                duration = (group["end_time"] -
+                            group["start_time"]).total_seconds() / 3600
                 group["duration"] = duration
-                
+
                 agents = group["participants"]
                 if agents:
-                    group["avg_stress"] = sum(agent.stress_level for agent in agents) / len(agents)
+                    group["avg_stress"] = sum(
+                        agent.stress_level for agent in agents) / len(agents)
                     group["success_rate"] = group.get("final_score", 0) / 100
                 else:
                     group["avg_stress"] = 0
                     group["success_rate"] = 0
-                
+
                 tqdm.write(f"\nGroup {group['id']} final results:")
                 tqdm.write(f"- Duration: {duration:.2f} hours")
                 tqdm.write(f"- Average Stress: {group['avg_stress']:.2f}")
@@ -456,24 +473,25 @@ class ExperimentController:
     def conduct_post_surveys(self):
         survey = self.survey_manager.get_survey(SurveyType.POST)
         total_participants = len(self.groups) * self.participants_per_group
-        
+
         print("\nConducting post-experiment surveys...")
         with tqdm(total=total_participants, desc="Surveys Progress") as survey_pbar:
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 future_to_agent = {}
-                
+
                 for group in self.groups:
                     for agent in group["participants"]:
                         future = executor.submit(agent.take_survey, survey)
                         future_to_agent[future] = agent
-                
+
                 for future in as_completed(future_to_agent.keys()):
                     agent = future_to_agent[future]
                     try:
                         agent.survey_results = future.result()
                     except Exception as e:
                         print(f"\nSurvey failed for agent {agent.id}: {e}")
-                        agent.survey_results = agent._generate_fallback_responses(survey)
+                        agent.survey_results = agent._generate_fallback_responses(
+                            survey)
                     finally:
                         survey_pbar.update(1)
 
@@ -481,28 +499,29 @@ class ExperimentController:
         print("\nExporting Results:")
         results_dir = Path("experiment_results")
         results_dir.mkdir(exist_ok=True)
-        
+
         print("1. Preparing detailed results...")
         detailed_results = {
             "experiment_time": self.start_time.isoformat(),
             "duration_hours": (datetime.now() - self.start_time).total_seconds() / 3600,
             "groups": []
         }
-        
+
         print("2. Processing group data...")
-        with tqdm(total=len(self.groups)
-        , desc="Processing Groups") as pbar:
+        with tqdm(total=len(self.groups), desc="Processing Groups") as pbar:
             for group in self.groups:
                 agents = group["participants"]
-                avg_stress = sum(agent.stress_level for agent in agents) / len(agents) if agents else 0
-                avg_adaptation = sum(agent.adaptation_score for agent in agents) / len(agents) if agents else 0
-                
+                avg_stress = sum(
+                    agent.stress_level for agent in agents) / len(agents) if agents else 0
+                avg_adaptation = sum(
+                    agent.adaptation_score for agent in agents) / len(agents) if agents else 0
+
                 success_chance = (
                     avg_adaptation * 0.4 +
                     (100 - avg_stress) * 0.3 +
                     (group.get("collective_resources", 0) / 1000) * 0.3
                 ) / 100.0
-                
+
                 group_data = {
                     "id": group["id"],
                     "space_type": group["condition"]["space"],
@@ -513,7 +532,7 @@ class ExperimentController:
                     "success_rate": success_chance,
                     "participants": []
                 }
-                
+
                 for agent in agents:
                     agent_data = {
                         "id": agent.id,
@@ -525,20 +544,24 @@ class ExperimentController:
                         "adaptation_score": agent.adaptation_score
                     }
                     group_data["participants"].append(agent_data)
-                
+
                 detailed_results["groups"].append(group_data)
                 pbar.update(1)
-        
+
         print("3. Saving files...")
-        json_path = results_dir / f"detailed_results_{self.start_time.strftime('%Y%m%d_%H%M%S')}.json"
+        json_path = results_dir / \
+            f"detailed_results_{
+                self.start_time.strftime('%Y%m%d_%H%M%S')}.json"
         with open(json_path, 'w') as f:
             json.dump(detailed_results, f, indent=2, default=str)
         print(f"   - Detailed results saved to: {json_path}")
-        
-        csv_path = results_dir / f"summary_{self.start_time.strftime('%Y%m%d_%H%M%S')}.csv"
+
+        csv_path = results_dir / \
+            f"summary_{self.start_time.strftime('%Y%m%d_%H%M%S')}.csv"
         with open(csv_path, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(["Group", "Space Type", "Has Exit", "Average Stress", "Success Rate", "Duration (hours)"])
+            writer.writerow(["Group", "Space Type", "Has Exit",
+                            "Average Stress", "Success Rate", "Duration (hours)"])
             for group in detailed_results["groups"]:
                 writer.writerow([
                     group["id"],
@@ -549,17 +572,17 @@ class ExperimentController:
                     detailed_results["duration_hours"]
                 ])
         print(f"   - Summary saved to: {csv_path}")
-        
+
         print("4. Generating visualizations...")
         self._create_visualization(results_dir, detailed_results)
-        
+
         print("\nKey Statistics:")
         for group in detailed_results["groups"]:
             print(f"\nGroup {group['id']} ({group['space_type']}):")
             print(f"  - Average Stress: {group['avg_stress']:.2f}")
             print(f"  - Success Rate: {group['success_rate']:.2%}")
             print(f"  - Crisis Count: {group['crisis_count']}")
-        
+
         if silent:
             return detailed_results
 
@@ -573,13 +596,13 @@ class ExperimentController:
                 'axes.titlesize': 14,
                 'figure.dpi': 300
             })
-            
+
             self._create_overview_plots(results_dir, results)
             self._create_stress_timeline(results_dir, results)
             self._create_environmental_impact_analysis(results_dir, results)
             self._create_personality_impact_analysis(results_dir, results)
             self._create_social_dynamics_analysis(results_dir, results)
-            
+
         except Exception as e:
             print(f"\nError in visualization creation: {str(e)}")
             print(f"Line number: {e.__traceback__.tb_lineno}")
@@ -589,22 +612,22 @@ class ExperimentController:
     def _create_basic_visualization(self, results_dir: Path, results: Dict):
         """Create simplified visualizations when fancy ones fail"""
         plt.figure(figsize=(15, 10))
-        
+
         stress_data = [g["avg_stress"] for g in results["groups"]]
         plt.bar(range(len(stress_data)), stress_data)
         plt.title("Average Stress Levels by Group")
         plt.xlabel("Group")
         plt.ylabel("Stress Level")
-        
+
         plt.savefig(results_dir / f"basic_analysis_{self.start_time.strftime('%Y%m%d_%H%M%S')}.png",
                     bbox_inches='tight')
         plt.close()
 
     def _create_overview_plots(self, results_dir: Path, results: Dict):
         plt.style.use('default')
-        
+
         fig = plt.figure(figsize=(20, 15))
-        
+
         ax1 = fig.add_subplot(221)
         stress_data = pd.DataFrame([
             {
@@ -614,9 +637,11 @@ class ExperimentController:
             }
             for g in results["groups"]
         ])
-        sns.violinplot(data=stress_data, x='Space Type', y='Stress Level', hue='Has Exit', ax=ax1, split=True)
-        ax1.set_title("Stress Distribution by Space Type and Exit Condition", fontsize=12, pad=20)
-        
+        sns.violinplot(data=stress_data, x='Space Type',
+                       y='Stress Level', hue='Has Exit', ax=ax1, split=True)
+        ax1.set_title(
+            "Stress Distribution by Space Type and Exit Condition", fontsize=12, pad=20)
+
         ax2 = fig.add_subplot(222)
         success_data = pd.DataFrame([
             {
@@ -626,9 +651,10 @@ class ExperimentController:
             }
             for g in results["groups"]
         ])
-        sns.barplot(data=success_data, x='Space Type', y='Success Rate', hue='Has Exit', ax=ax2)
+        sns.barplot(data=success_data, x='Space Type',
+                    y='Success Rate', hue='Has Exit', ax=ax2)
         ax2.set_title("Success Rates by Environment Type", fontsize=12, pad=20)
-        
+
         ax3 = fig.add_subplot(223)
         correlation_data = pd.DataFrame([
             {
@@ -641,9 +667,10 @@ class ExperimentController:
             for g in results["groups"]
             for p in g["participants"]
         ])
-        sns.heatmap(correlation_data.corr(), annot=True, cmap='coolwarm', ax=ax3)
+        sns.heatmap(correlation_data.corr(),
+                    annot=True, cmap='coolwarm', ax=ax3)
         ax3.set_title("Correlation Between Key Metrics", fontsize=12, pad=20)
-        
+
         ax4 = fig.add_subplot(224)
         performance_data = pd.DataFrame([
             {
@@ -654,7 +681,7 @@ class ExperimentController:
             }
             for g in results["groups"]
         ])
-        
+
         sns.scatterplot(
             data=performance_data,
             x='Crisis Count',
@@ -664,17 +691,18 @@ class ExperimentController:
             sizes=(100, 400),
             ax=ax4
         )
-        ax4.set_title("Crisis Performance vs Stress Levels", fontsize=12, pad=20)
-        
+        ax4.set_title("Crisis Performance vs Stress Levels",
+                      fontsize=12, pad=20)
+
         plt.tight_layout()
-        plt.savefig(results_dir / f"overview_{self.start_time.strftime('%Y%m%d_%H%M%S')}.png", 
+        plt.savefig(results_dir / f"overview_{self.start_time.strftime('%Y%m%d_%H%M%S')}.png",
                     dpi=300, bbox_inches='tight')
         plt.close()
 
     def _create_environmental_impact_analysis(self, results_dir: Path, results: Dict):
         """Create analysis of environmental factors"""
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(20, 15))
-        
+
         space_data = pd.DataFrame([
             {
                 'Environment': f"{g['space_type'].title()}\n{'(Exit Available)' if g['has_exit'] else '(No Exit)'}",
@@ -684,18 +712,18 @@ class ExperimentController:
             }
             for g in results['groups']
         ])
-        
+
         sns.barplot(data=space_data, x='Environment', y='Stress Level', ax=ax1)
         ax1.set_title('Impact of Space Configuration on Stress Levels')
         ax1.set_ylabel('Average Stress Level')
-        
+
         findings = (
             "Key Findings:\n"
             "• Confined spaces increase stress by 30-40%\n"
             "• Exit availability reduces stress by 15-25%\n"
             "• Open spaces promote better adaptation"
         )
-        ax1.text(0.05, 0.95, findings, transform=ax1.transAxes, 
+        ax1.text(0.05, 0.95, findings, transform=ax1.transAxes,
                  bbox=dict(facecolor='white', alpha=0.8),
                  verticalalignment='top', fontsize=10)
 
@@ -708,11 +736,11 @@ class ExperimentController:
             }
             for g in results['groups']
         ])
-        
-        sns.scatterplot(data=crisis_data, x='Crisis Count', y='Success Rate', 
-                       hue='Space Type', style='Has Exit', s=200, ax=ax2)
+
+        sns.scatterplot(data=crisis_data, x='Crisis Count', y='Success Rate',
+                        hue='Space Type', style='Has Exit', s=200, ax=ax2)
         ax2.set_title('Crisis Management Effectiveness')
-        
+
         social_data = pd.DataFrame([
             {
                 'Social Connections': p['social_connections'],
@@ -723,11 +751,11 @@ class ExperimentController:
             for g in results['groups']
             for p in g['participants']
         ])
-        
-        sns.regplot(data=social_data, x='Social Connections', y='Stress Level', 
-                   scatter_kws={'alpha':0.5}, ax=ax3)
+
+        sns.regplot(data=social_data, x='Social Connections', y='Stress Level',
+                    scatter_kws={'alpha': 0.5}, ax=ax3)
         ax3.set_title('Social Connections vs Stress Level')
-        
+
         resource_data = pd.DataFrame([
             {
                 'Environment': f"{g['space_type']}\n{'(with exit)' if g['has_exit'] else '(no exit)'}",
@@ -736,10 +764,10 @@ class ExperimentController:
             }
             for g in results['groups']
         ])
-        
+
         sns.barplot(data=resource_data, x='Environment', y='Resources', ax=ax4)
         ax4.set_title('Resource Management by Environment')
-        
+
         insights = (
             "Critical Environmental Factors:\n"
             "1. Space Configuration\n"
@@ -748,9 +776,9 @@ class ExperimentController:
             "4. Resource Access\n"
             "5. Crisis Management"
         )
-        fig.text(0.02, 0.02, insights, fontsize=12, 
-                bbox=dict(facecolor='white', edgecolor='gray', alpha=0.8))
-        
+        fig.text(0.02, 0.02, insights, fontsize=12,
+                 bbox=dict(facecolor='white', edgecolor='gray', alpha=0.8))
+
         plt.tight_layout()
         plt.savefig(results_dir / f"environmental_impact_{self.start_time.strftime('%Y%m%d_%H%M%S')}.png",
                     bbox_inches='tight')
@@ -759,7 +787,7 @@ class ExperimentController:
     def _create_personality_impact_analysis(self, results_dir: Path, results: Dict):
         """Analyze impact of personality traits on performance"""
         plt.figure(figsize=(15, 10))
-        
+
         personality_data = pd.DataFrame([
             {
                 'Space Type': group["space_type"],
@@ -771,22 +799,23 @@ class ExperimentController:
             for group in results["groups"]
             for p in group["participants"]
         ])
-        
+
         fig, axes = plt.subplots(2, 2, figsize=(20, 15))
-        
+
         sns.boxplot(
             data=pd.melt(
                 personality_data,
-                value_vars=['extroversion', 'neuroticism', 'resilience', 'trauma_sensitivity'],
+                value_vars=['extroversion', 'neuroticism',
+                            'resilience', 'trauma_sensitivity'],
                 id_vars=['Stress']
             ),
             x='variable',
             y='value',
             hue='Stress',
-            ax=axes[0,0]
+            ax=axes[0, 0]
         )
-        axes[0,0].set_title("Personality Traits vs Stress Levels")
-        
+        axes[0, 0].set_title("Personality Traits vs Stress Levels")
+
         sns.scatterplot(
             data=personality_data,
             x='resilience',
@@ -795,19 +824,19 @@ class ExperimentController:
             style='Has Exit',
             size='extroversion',
             sizes=(50, 200),
-            ax=axes[0,1]
+            ax=axes[0, 1]
         )
-        axes[0,1].set_title("Adaptation Score by Personality Traits")
-        
+        axes[0, 1].set_title("Adaptation Score by Personality Traits")
+
         sns.kdeplot(
             data=personality_data,
             x='Stress',
             hue='Space Type',
             multiple="layer",
-            ax=axes[1,0]
+            ax=axes[1, 0]
         )
-        axes[1,0].set_title("Stress Distribution by Space Type")
-        
+        axes[1, 0].set_title("Stress Distribution by Space Type")
+
         sns.scatterplot(
             data=personality_data,
             x='neuroticism',
@@ -816,10 +845,10 @@ class ExperimentController:
             style='Has Exit',
             size='Adaptation',
             sizes=(50, 200),
-            ax=axes[1,1]
+            ax=axes[1, 1]
         )
-        axes[1,1].set_title("Personality Clusters and Adaptation")
-        
+        axes[1, 1].set_title("Personality Clusters and Adaptation")
+
         plt.tight_layout()
         plt.savefig(results_dir / f"personality_analysis_{self.start_time.strftime('%Y%m%d_%H%M%S')}.png",
                     dpi=300, bbox_inches='tight')
@@ -841,7 +870,7 @@ class ExperimentController:
                 'Resource Level': g["collective_resources"] / 1000
             }.items()
         ])
-        
+
         plt.figure(figsize=(15, 10))
         sns.catplot(
             data=metrics_data,
@@ -853,7 +882,7 @@ class ExperimentController:
             aspect=0.8,
             col_wrap=2
         )
-        
+
         plt.savefig(results_dir / f"detailed_metrics_{self.start_time.strftime('%Y%m%d_%H%M%S')}.png",
                     dpi=300, bbox_inches='tight')
         plt.close()
@@ -861,7 +890,7 @@ class ExperimentController:
     def _create_social_dynamics_analysis(self, results_dir: Path, results: Dict):
         """Analyze social dynamics and their impact"""
         fig, axes = plt.subplots(2, 2, figsize=(20, 15))
-        
+
         social_metrics = pd.DataFrame([
             {
                 'Space Type': g['space_type'],
@@ -874,21 +903,23 @@ class ExperimentController:
             for g in results['groups']
             for p in g['participants']
         ])
-        
-        sns.boxplot(data=social_metrics, x='Space Type', y='Social Connections', 
-                   hue='Has Exit', ax=axes[0,0])
-        axes[0,0].set_title('Social Network Density by Environment')
-        
+
+        sns.boxplot(data=social_metrics, x='Space Type', y='Social Connections',
+                    hue='Has Exit', ax=axes[0, 0])
+        axes[0, 0].set_title('Social Network Density by Environment')
+
         sns.scatterplot(data=social_metrics, x='Social Connections', y='Stress Level',
-                       size='Adaptation', hue='Space Type', ax=axes[0,1])
-        axes[0,1].set_title('Impact of Social Support on Stress')
-        
-        sns.violinplot(data=social_metrics, x='Space Type', y='Extroversion', ax=axes[1,0])
-        axes[1,0].set_title('Distribution of Social Tendencies')
-        
-        sns.heatmap(social_metrics.corr(), annot=True, cmap='coolwarm', ax=axes[1,1])
-        axes[1,1].set_title('Correlation of Social Factors')
-        
+                        size='Adaptation', hue='Space Type', ax=axes[0, 1])
+        axes[0, 1].set_title('Impact of Social Support on Stress')
+
+        sns.violinplot(data=social_metrics, x='Space Type',
+                       y='Extroversion', ax=axes[1, 0])
+        axes[1, 0].set_title('Distribution of Social Tendencies')
+
+        sns.heatmap(social_metrics.corr(), annot=True,
+                    cmap='coolwarm', ax=axes[1, 1])
+        axes[1, 1].set_title('Correlation of Social Factors')
+
         insights = (
             "Social Dynamics Insights:\n"
             "• Higher social connections → Lower stress\n"
@@ -897,8 +928,8 @@ class ExperimentController:
             "• Social networks crucial for crisis resilience"
         )
         fig.text(0.02, 0.02, insights, fontsize=12,
-                bbox=dict(facecolor='white', edgecolor='gray', alpha=0.8))
-        
+                 bbox=dict(facecolor='white', edgecolor='gray', alpha=0.8))
+
         plt.tight_layout()
         plt.savefig(results_dir / f"social_dynamics_{self.start_time.strftime('%Y%m%d_%H%M%S')}.png",
                     bbox_inches='tight')
@@ -907,7 +938,7 @@ class ExperimentController:
     def _create_social_network_analysis(self, results_dir: Path, results: Dict):
         """Create detailed social network visualization"""
         plt.figure(figsize=(15, 10))
-        
+
         for i, group in enumerate(results["groups"], 1):
             plt.subplot(2, 2, i)
             connections = pd.DataFrame([
@@ -918,7 +949,7 @@ class ExperimentController:
                 }
                 for p in group["participants"]
             ])
-            
+
             sns.scatterplot(
                 data=connections,
                 x='Connections',
@@ -927,11 +958,12 @@ class ExperimentController:
                 sizes=(50, 400),
                 alpha=0.6
             )
-            
-            plt.title(f"{group['space_type'].title()} Space\n{'With' if group['has_exit'] else 'Without'} Exit")
+
+            plt.title(f"{group['space_type'].title()} Space\n{
+                      'With' if group['has_exit'] else 'Without'} Exit")
             plt.xlabel("Number of Social Connections")
             plt.ylabel("Stress Level")
-        
+
         plt.tight_layout()
         plt.savefig(results_dir / f"social_network_{self.start_time.strftime('%Y%m%d_%H%M%S')}.png",
                     dpi=300, bbox_inches='tight')
@@ -940,11 +972,11 @@ class ExperimentController:
     def _create_stress_timeline(self, results_dir: Path, results: Dict):
         """Create a visualization of stress levels over time"""
         plt.figure(figsize=(15, 8))
-        
-        phases = ['Initial', 'Briefing', 'Adaptation', 'Resource Crisis', 
-                 'Social Phase', 'Major Crisis', 'Resolution']
+
+        phases = ['Initial', 'Briefing', 'Adaptation', 'Resource Crisis',
+                  'Social Phase', 'Major Crisis', 'Resolution']
         x_points = np.linspace(0, len(phases)-1, len(phases))
-        
+
         for group in results["groups"]:
             stress_trend = [
                 35,
@@ -955,47 +987,48 @@ class ExperimentController:
                 70 if group["space_type"] == "confined" else 55,
                 group["avg_stress"]
             ]
-            
+
             if not group["has_exit"]:
                 stress_trend = [s * 1.2 for s in stress_trend]
-            
-            condition = f"{group['space_type']} {'(with exit)' if group['has_exit'] else '(no exit)'}"
-            
-            plt.plot(x_points, stress_trend, 
-                    label=condition,
-                    linewidth=3,
-                    marker='o',
-                    markersize=8,
-                    alpha=0.8)
-        
-        plt.title("Psychological Impact Throughout Mission Phases\n(Space Settlement Study)", 
-                 fontsize=16, 
-                 pad=20)
+
+            condition = f"{group['space_type']} {
+                '(with exit)' if group['has_exit'] else '(no exit)'}"
+
+            plt.plot(x_points, stress_trend,
+                     label=condition,
+                     linewidth=3,
+                     marker='o',
+                     markersize=8,
+                     alpha=0.8)
+
+        plt.title("Psychological Impact Throughout Mission Phases\n(Space Settlement Study)",
+                  fontsize=16,
+                  pad=20)
         plt.xlabel("Mission Phase", fontsize=14, labelpad=10)
         plt.ylabel("Stress Level", fontsize=14, labelpad=10)
-        
+
         plt.xticks(x_points, phases, rotation=45, ha='right')
-        
+
         plt.grid(True, alpha=0.3, linestyle='--')
-        
+
         plt.legend(title="Environment Configuration",
-                  title_fontsize=12,
-                  fontsize=10,
-                  bbox_to_anchor=(1.05, 1),
-                  loc='upper left')
-        
-        plt.annotate('Crisis Response Zone', 
-                    xy=(3, 60), 
-                    xytext=(3.2, 80),
-                    arrowprops=dict(facecolor='red', shrink=0.05),
-                    fontsize=10)
-                    
-        plt.annotate('Recovery Period', 
-                    xy=(4, 45), 
-                    xytext=(4.2, 65),
-                    arrowprops=dict(facecolor='green', shrink=0.05),
-                    fontsize=10)
-        
+                   title_fontsize=12,
+                   fontsize=10,
+                   bbox_to_anchor=(1.05, 1),
+                   loc='upper left')
+
+        plt.annotate('Crisis Response Zone',
+                     xy=(3, 60),
+                     xytext=(3.2, 80),
+                     arrowprops=dict(facecolor='red', shrink=0.05),
+                     fontsize=10)
+
+        plt.annotate('Recovery Period',
+                     xy=(4, 45),
+                     xytext=(4.2, 65),
+                     arrowprops=dict(facecolor='green', shrink=0.05),
+                     fontsize=10)
+
         insight_text = (
             "Key Observations:\n"
             "• Confined spaces show higher baseline stress\n"
@@ -1003,18 +1036,18 @@ class ExperimentController:
             "• Social phase enables stress recovery\n"
             "• Crisis impacts vary by environment type"
         )
-        plt.text(0.02, 0.98, insight_text, 
-                transform=plt.gca().transAxes,
-                bbox=dict(facecolor='white', alpha=0.8, edgecolor='gray'),
-                verticalalignment='top',
-                fontsize=10)
-        
-        all_stress_values = [s for group in results["groups"] 
-                           for s in [35, group["avg_stress"]]]
+        plt.text(0.02, 0.98, insight_text,
+                 transform=plt.gca().transAxes,
+                 bbox=dict(facecolor='white', alpha=0.8, edgecolor='gray'),
+                 verticalalignment='top',
+                 fontsize=10)
+
+        all_stress_values = [s for group in results["groups"]
+                             for s in [35, group["avg_stress"]]]
         plt.ylim(0, max(all_stress_values) * 1.2)
-        
+
         plt.tight_layout()
-        
+
         plt.savefig(results_dir / f"stress_timeline_{self.start_time.strftime('%Y%m%d_%H%M%S')}.png",
                     dpi=300,
                     bbox_inches='tight',
@@ -1025,33 +1058,34 @@ class ExperimentController:
         """Run multiple simulations with and without solutions"""
         print("\n=== Running Comparative Space Settlement Study ===")
         print("Phase 1: Baseline (No Solution)")
-        
+
         self.solution_enabled = False
         baseline_results = self._run_simulation_batch()
-        
+
         print("\nPhase 2: Testing Solution Implementation")
         self.solution_enabled = True
         solution_results = self._run_simulation_batch()
-        
+
         self._analyze_solution_impact(baseline_results, solution_results)
-    
+
     def _run_simulation_batch(self):
         results = []
         for sim_num in range(self.num_simulations):
             print(f"\nSimulation {sim_num + 1}/{self.num_simulations}")
-            print(f"Solution {'Enabled' if self.solution_enabled else 'Disabled'}")
-            
+            print(f"Solution {
+                  'Enabled' if self.solution_enabled else 'Disabled'}")
+
             self.start_time = datetime.now()
             self.initialize_experiment()
             self.run_experiment()
-            
+
             sim_results = self.export_results(silent=True)
             results.append(sim_results)
         return results
-    
+
     def _analyze_solution_impact(self, baseline_results, solution_results):
         analyzer = SpaceSettlementAnalyzer(Path("experiment_results"))
-        
+
         baseline_data = pd.DataFrame([
             {
                 'stress_level': p["final_stress"],
@@ -1064,7 +1098,7 @@ class ExperimentController:
             for g in r["groups"]
             for p in g["participants"]
         ])
-        
+
         solution_data = pd.DataFrame([
             {
                 'stress_level': p["final_stress"],
@@ -1077,50 +1111,58 @@ class ExperimentController:
             for g in r["groups"]
             for p in g["participants"]
         ])
-        
-        impact_results = analyzer.analyze_solution_impact(solution_data, baseline_data)
+
+        impact_results = analyzer.analyze_solution_impact(
+            solution_data, baseline_data)
         report = analyzer.generate_solution_report(impact_results)
-        
-        report_path = Path("experiment_results") / f"solution_impact_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+
+        report_path = Path("experiment_results") / f"solution_impact_report_{
+            datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         with open(report_path, 'w') as f:
             f.write(report)
-        
+
         analyzer.plot_solution_impact(solution_data, baseline_data)
-        
+
         print("\n=== Solution Impact Analysis Complete ===")
         print(f"Full report saved to: {report_path}")
         print("\nKey Findings:")
-        print(f"Stress Reduction: {impact_results['stress_analysis']['improvement_percent']:.1f}%")
-        print(f"Social Network Improvement: {impact_results['social_network']['density_improvement']:.1f}%")
+        print(f"Stress Reduction: {
+              impact_results['stress_analysis']['improvement_percent']:.1f}%")
+        print(f"Social Network Improvement: {
+              impact_results['social_network']['density_improvement']:.1f}%")
 
     def _create_aggregate_visualizations(self, results_dir: Path, data: Dict):
         """Create visualizations for aggregated simulation data"""
         stress_df = pd.DataFrame(data["stress_levels"])
         adaptation_df = pd.DataFrame(data["adaptation_scores"])
-        
+
         combined_df = pd.merge(
             stress_df,
             adaptation_df,
             on=["space_type", "has_exit", "simulation"]
         )
-        
+
         numeric_df = combined_df.copy()
-        numeric_df['space_type_num'] = (numeric_df['space_type'] == 'confined').astype(int)
+        numeric_df['space_type_num'] = (
+            numeric_df['space_type'] == 'confined').astype(int)
         numeric_df['has_exit_num'] = numeric_df['has_exit'].astype(int)
-        
-        correlation_columns = ['stress', 'score', 'space_type_num', 'has_exit_num']
+
+        correlation_columns = ['stress', 'score',
+                               'space_type_num', 'has_exit_num']
         correlation_labels = ['Stress', 'Adaptation', 'Space Type', 'Has Exit']
-        
+
         fig = plt.figure(figsize=(20, 15))
-        
+
         ax1 = fig.add_subplot(221)
-        sns.boxplot(data=stress_df, x="space_type", y="stress", hue="has_exit", ax=ax1)
+        sns.boxplot(data=stress_df, x="space_type",
+                    y="stress", hue="has_exit", ax=ax1)
         ax1.set_title("Stress Distribution Across All Simulations")
-        
+
         ax2 = fig.add_subplot(222)
-        sns.violinplot(data=adaptation_df, x="space_type", y="score", hue="has_exit", ax=ax2, split=True)
+        sns.violinplot(data=adaptation_df, x="space_type",
+                       y="score", hue="has_exit", ax=ax2, split=True)
         ax2.set_title("Adaptation Score Distributions")
-        
+
         ax3 = fig.add_subplot(223)
         sns.lineplot(
             data=stress_df,
@@ -1132,7 +1174,7 @@ class ExperimentController:
             ax=ax3
         )
         ax3.set_title("Stress Level Evolution Across Simulations")
-        
+
         ax4 = fig.add_subplot(224)
         correlation_matrix = numeric_df[correlation_columns].corr()
         sns.heatmap(
@@ -1144,7 +1186,7 @@ class ExperimentController:
             yticklabels=correlation_labels
         )
         ax4.set_title("Metric Correlations")
-        
+
         plt.tight_layout()
         plt.savefig(results_dir / f"aggregate_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
                     dpi=300, bbox_inches='tight')
@@ -1166,15 +1208,19 @@ class ExperimentController:
                 "by_exit_condition": {}
             }
         }
-        
+
         stress_df = pd.DataFrame(data["stress_levels"])
         adaptation_df = pd.DataFrame(data["adaptation_scores"])
-        
-        stats["stress_stats"]["by_space_type"] = stress_df.groupby("space_type")["stress"].describe().to_dict()
-        stats["stress_stats"]["by_exit_condition"] = stress_df.groupby("has_exit")["stress"].describe().to_dict()
-        stats["adaptation_stats"]["by_space_type"] = adaptation_df.groupby("space_type")["score"].describe().to_dict()
-        
-        stats_path = results_dir / f"aggregate_stats_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+        stats["stress_stats"]["by_space_type"] = stress_df.groupby(
+            "space_type")["stress"].describe().to_dict()
+        stats["stress_stats"]["by_exit_condition"] = stress_df.groupby(
+            "has_exit")["stress"].describe().to_dict()
+        stats["adaptation_stats"]["by_space_type"] = adaptation_df.groupby(
+            "space_type")["score"].describe().to_dict()
+
+        stats_path = results_dir / \
+            f"aggregate_stats_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(stats_path, 'w') as f:
             json.dump(stats, f, indent=2)
 
@@ -1182,7 +1228,7 @@ class ExperimentController:
         """Apply advanced space settlement solutions with improved metrics"""
         if not self.enable_solution:
             return
-        
+
         current_phase_hour = {
             "briefing": 9,
             "adaptation": 11,
@@ -1191,9 +1237,9 @@ class ExperimentController:
             "major_crisis": 17,
             "resolution": 19
         }.get(self.current_phase, 12)
-        
+
         current_time = datetime.now().replace(hour=current_phase_hour)
-        
+
         solutions = {
             "adaptive_architecture": {
                 "stress_reduction": 0.35,
@@ -1213,57 +1259,80 @@ class ExperimentController:
                 }
             }
         }
-        
+
         for agent in group["participants"]:
             if not hasattr(agent, 'social_connections') or not isinstance(agent.social_connections, set):
                 agent.social_connections = set()
-            
+
             if 6 <= current_time.hour <= 9:
-                agent.stress_level *= (1 - solutions['integrated_protocol']['morning_activation']['stress_reduction'])
-                agent.adaptation_score *= (1 + solutions['integrated_protocol']['morning_activation']['cognitive_enhancement'])
-            
-            if 11 <= current_time.hour <= 14: 
-                agent.stress_level *= (1 - solutions['integrated_protocol']['midday_reset']['stress_reduction'])
-                agent.adaptation_score *= (1 + solutions['integrated_protocol']['midday_reset']['emotional_stability'])
-            
+                agent.stress_level *= (1 - solutions['integrated_protocol']
+                                       ['morning_activation']['stress_reduction'])
+                agent.adaptation_score *= (
+                    1 + solutions['integrated_protocol']['morning_activation']['cognitive_enhancement'])
+
+            if 11 <= current_time.hour <= 14:
+                agent.stress_level *= (1 - solutions['integrated_protocol']
+                                       ['midday_reset']['stress_reduction'])
+                agent.adaptation_score *= (
+                    1 + solutions['integrated_protocol']['midday_reset']['emotional_stability'])
+
             social_boost_chance = solutions['adaptive_architecture']['social_boost']
             if random.random() < social_boost_chance:
                 available_agents = [
-                    a for a in group["participants"] 
+                    a for a in group["participants"]
                     if a != agent and a not in agent.social_connections
                 ]
-                
+
                 if available_agents:
                     num_new_connections = min(2, len(available_agents))
-                    new_connections = random.sample(available_agents, num_new_connections)
-                    
+                    new_connections = random.sample(
+                        available_agents, num_new_connections)
+
                     for new_connection in new_connections:
                         agent.social_connections.add(new_connection)
                         new_connection.social_connections.add(agent)
-                        
-                        agent.stress_level *= (1 - 0.05) 
+
+                        agent.stress_level *= (1 - 0.05)
                         agent.adaptation_score *= (1 + 0.05)
-                        
+
                         new_connection.stress_level *= (1 - 0.05)
                         new_connection.adaptation_score *= (1 + 0.05)
 
-from solution_tester import SolutionTester
+
+def test_solution_effectiveness():
+    """
+    Run multiple iterations of the solution simulation to statistically compare solution effectiveness.
+    """
+    from solution_tester import SolutionTester
+    from scipy.stats import f_oneway
+    num_runs = 30
+    solutions = ["adaptive_architecture", "physical_integration", "therapeutic_integration"]
+    performance_data = {sol: [] for sol in solutions}
+
+    for _ in range(num_runs):
+        tester = SolutionTester()
+        for sol in solutions:
+            performance_data[sol].append(tester.results[sol]["performance"])
+
+    stat, p_val = f_oneway(*(performance_data[sol] for sol in solutions))
+    print("ANOVA Test across solutions -> F-statistic: {:.3f}, p-value: {:.3e}".format(stat, p_val))
+
 
 if __name__ == "__main__":
     controller = ExperimentController()
     controller.participants_per_group = 10
     controller.num_simulations = 3
     controller.solution_type = "adaptive_architecture"
-    
+
     print("\n=== Running Space Settlement Psychology Experiment ===")
     print(f"Configuration:")
     print(f"- Participants per group: {controller.participants_per_group}")
     print(f"- Number of simulations: {controller.num_simulations}")
     print(f"- Solution type: {controller.solution_type}")
-    
+
     results = controller.run_multiple_simulations()
     print("\nExperiment completed. Check the 'experiment_results' directory for detailed analysis.")
-    
+
     tester = SolutionTester()
     best_sol, eval_metrics = tester.evaluate_solutions()
     print("\nTesting Proposed Solutions:")
@@ -1271,3 +1340,5 @@ if __name__ == "__main__":
         print(f"- {sol}: {score:.2f}")
     print(f"Best Solution: {best_sol}")
     tester.plot_comparative_graphs()
+
+    test_solution_effectiveness()

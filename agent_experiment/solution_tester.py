@@ -16,21 +16,21 @@ class SolutionTester:
         self.results = {sol: self._simulate_solution(sol) for sol in self.solutions}
 
     def _simulate_solution(self, solution: str) -> dict:
-        agents = [AIAgent(id=i, openai_key=self.openai_key) for i in range(10)]
+        agents = [AIAgent(id=i, openai_key=self.openai_key) for i in range(30)]
         total_adapt = 0
         total_stress = 0
         for agent in agents:
             base_adapt = agent.adaptation_score
             base_stress = agent.stress_level
             if solution == "adaptive_architecture":
+                adjusted_adapt = base_adapt + 20
+                adjusted_stress = max(0, base_stress * 0.80)
+            elif solution == "physical_integration":
                 adjusted_adapt = base_adapt + 10
                 adjusted_stress = max(0, base_stress * 0.85)
-            elif solution == "physical_integration":
-                adjusted_adapt = base_adapt + 5
-                adjusted_stress = max(0, base_stress * 0.90)
             elif solution == "therapeutic_integration":
-                adjusted_adapt = base_adapt + 8
-                adjusted_stress = max(0, base_stress * 0.88)
+                adjusted_adapt = base_adapt + 16
+                adjusted_stress = max(0, base_stress * 0.80)
             else:
                 adjusted_adapt = base_adapt
                 adjusted_stress = base_stress
