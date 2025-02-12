@@ -1251,8 +1251,8 @@ from solution_tester import SolutionTester
 
 if __name__ == "__main__":
     controller = ExperimentController()
-    controller.participants_per_group = 1
-    controller.num_simulations = 1
+    controller.participants_per_group = 10
+    controller.num_simulations = 3
     controller.solution_type = "adaptive_architecture"
     
     print("\n=== Running Space Settlement Psychology Experiment ===")

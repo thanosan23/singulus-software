@@ -90,7 +90,7 @@ class ExperimentController:
         success_prob = (
             collaboration_count * 0.2 +
             leadership_seekers * 0.1 +
-            (1 - sum(a.stress for a in group.participants)/len(group.participants)) * 0.3  # Stress penalty
+            (1 - sum(a.stress for a in group.participants)/len(group.participants)) * 0.3
         )
         
         if random.random() < success_prob:
