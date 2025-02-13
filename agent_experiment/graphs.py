@@ -1,6 +1,8 @@
-import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 import numpy as np
 
 def plot_metric_distribution(data: pd.DataFrame, metric: str, title: str, xlabel: str, ylabel: str, export_path: str = None):
@@ -11,9 +13,7 @@ def plot_metric_distribution(data: pd.DataFrame, metric: str, title: str, xlabel
     plt.ylabel(ylabel)
     if export_path:
         plt.savefig(export_path, dpi=300, bbox_inches='tight')
-    else:
-        plt.show()
-    plt.close()
+    plt.close('all')
 
 def plot_group_metric(data: pd.DataFrame, group_by: str, metric: str, title: str, xlabel: str, ylabel: str, export_path: str = None):
     plt.figure(figsize=(10, 6))
@@ -23,8 +23,6 @@ def plot_group_metric(data: pd.DataFrame, group_by: str, metric: str, title: str
     plt.ylabel(ylabel)
     if export_path:
         plt.savefig(export_path, dpi=300, bbox_inches='tight')
-    else:
-        plt.show()
     plt.close()
 
 def plot_all_measured_metrics(data: pd.DataFrame, export_dir: str = None):
@@ -48,7 +46,6 @@ def plot_metric_by_group(data: pd.DataFrame, group_col: str = "group_id", export
             plot_group_metric(data, group_col, metric, title, group_col.title(), metric.replace('_', ' ').title(), export_path)
 
 def plot_all_measured_metrics(df: pd.DataFrame) -> None:
-    # Improved overall metrics graph
     plt.figure(figsize=(12, 8))
     metrics = [col for col in df.columns if col not in ['Group', 'Method']]
     for metric in metrics:
@@ -60,7 +57,6 @@ def plot_all_measured_metrics(df: pd.DataFrame) -> None:
     plt.tight_layout()
 
 def plot_metric_by_group(df: pd.DataFrame) -> None:
-    # Boxplot comparing metrics across groups
     metrics = [col for col in df.columns if col not in ['Group', 'Method']]
     num_metrics = len(metrics)
     fig, axes = plt.subplots(1, num_metrics, figsize=(5*num_metrics, 5))
@@ -71,15 +67,13 @@ def plot_metric_by_group(df: pd.DataFrame) -> None:
         ax.set_title(f"{metric} by Group")
     plt.tight_layout()
 
-def plot_improvement_comparison(baseline_df: pd.DataFrame, solution_df: pd.DataFrame) -> None:
-    # Combine dataframes with an extra column indicating method
+def plot_improvement_comparison(baseline_df: pd.DataFrame, solution_df: pd.DataFrame, export_path: str = None) -> None:
     baseline_df = baseline_df.copy()
     solution_df = solution_df.copy()
     baseline_df["Method"] = "Baseline"
     solution_df["Method"] = "Solution"
     combined = pd.concat([baseline_df, solution_df])
     
-    # Plot improvements per metric
     metrics = [col for col in combined.columns if col not in ['Group', 'Method']]
     fig, axes = plt.subplots(1, len(metrics), figsize=(5*len(metrics), 5))
     if len(metrics) == 1:
@@ -89,6 +83,9 @@ def plot_improvement_comparison(baseline_df: pd.DataFrame, solution_df: pd.DataF
         ax.set_title(f"Comparison of {metric}")
         ax.set_ylabel(f"{metric} Value")
     plt.tight_layout()
+    if export_path:
+        plt.savefig(export_path, dpi=300, bbox_inches='tight')
+    plt.close('all')
 
 def plot_confusion_matrix(matrix: np.ndarray, title: str, export_path: str = None) -> None:
     plt.figure(figsize=(8, 6))

@@ -23,17 +23,20 @@ class SolutionTester:
             base_adapt = agent.adaptation_score
             base_stress = agent.stress_level
             if solution == "adaptive_architecture":
-                adjusted_adapt = base_adapt + 20
-                adjusted_stress = max(0, base_stress * 0.80)
+                reduction = random.uniform(0.15, 0.35)
+                increase = random.uniform(10, 30)
             elif solution == "physical_integration":
-                adjusted_adapt = base_adapt + 10
-                adjusted_stress = max(0, base_stress * 0.85)
+                reduction = random.uniform(0.10, 0.30)
+                increase = random.uniform(5, 15)
             elif solution == "therapeutic_integration":
-                adjusted_adapt = base_adapt + 16
-                adjusted_stress = max(0, base_stress * 0.80)
+                reduction = random.uniform(0.12, 0.32)
+                increase = random.uniform(8, 20)
             else:
-                adjusted_adapt = base_adapt
-                adjusted_stress = base_stress
+                reduction = 0.0
+                increase = 0
+
+            adjusted_stress = max(0, base_stress * (1 - reduction))
+            adjusted_adapt = base_adapt + increase
 
             total_adapt += adjusted_adapt
             total_stress += adjusted_stress
@@ -49,6 +52,14 @@ class SolutionTester:
             evaluation[sol] = metrics["performance"]
         best_solution = max(evaluation, key=evaluation.get)
         return best_solution, evaluation
+
+    def compare_stress_reduction(self):
+        baseline_results = self._simulate_solution("baseline")
+        print(f"Baseline Average Stress: {baseline_results['avg_stress']:.2f}")
+        for sol in self.solutions:
+            sol_results = self._simulate_solution(sol)
+            reduction = baseline_results['avg_stress'] - sol_results['avg_stress']
+            print(f"Solution '{sol}' Reduced Stress by: {reduction:.2f} (Baseline: {baseline_results['avg_stress']:.2f} vs {sol_results['avg_stress']:.2f})")
 
     def plot_comparative_graphs(self):
         df = pd.DataFrame([

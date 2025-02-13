@@ -57,8 +57,10 @@ class AIAgent:
         self.personality = self._generate_personality()
         self.social_connections = set()
         self.resources = random.randint(50, 100)
-        self.adaptation_score = random.randint(60, 90)
+        self.adaptation_score = random.randint(60, 100)
         self.stress_level = random.randint(25, 35)
+        self.anxiety_level = random.randint(10, 30)
+        self.baseline_anxiety = random.uniform(10, 30)
         self.pre_survey = None
         self.survey_results = None
         self._state_lock = threading.Lock()
@@ -146,6 +148,58 @@ class AIAgent:
                 'stress': self.stress_level,
                 'adaptation': self.adaptation_score,
                 'stress_change': stress_change
+            })
+
+            confined_anxiety = 15 if environment.get('confined', False) else 0
+            crisis_anxiety = 25 if environment.get('crisis_event', False) else 0
+            social_anxiety = max(0, 20 - len(social_context.get('connections', [])) * 2)
+            
+            anxiety_susceptibility = (
+                self.personality['neuroticism'] * 0.4 +
+                self.personality['trauma_sensitivity'] * 0.3 +
+                (1 - self.personality['resilience']) * 0.3
+            )
+
+            base_anxiety = self.baseline_anxiety + confined_anxiety + crisis_anxiety + social_anxiety
+            self.anxiety_level = min(100, base_anxiety * (0.5 + anxiety_susceptibility))
+            
+            self.stress_level += self.anxiety_level * 0.1
+            self.anxiety_level += self.stress_level * 0.05
+            
+            self.stress_level = min(100, self.stress_level)
+            self.anxiety_level = min(100, self.anxiety_level)
+
+            confined_anxiety = 15 if environment.get('confined', False) else 0
+            crisis_anxiety = 25 if environment.get('crisis_event', False) else 0
+            social_anxiety = max(0, 20 - len(social_context.get('connections', [])) * 2)
+            
+            anxiety_susceptibility = (
+                self.personality['neuroticism'] * 0.4 +
+                self.personality['trauma_sensitivity'] * 0.3 +
+                (1 - self.personality['resilience']) * 0.3
+            )
+
+            base_anxiety = self.baseline_anxiety + confined_anxiety + crisis_anxiety + social_anxiety
+            anxiety_change = base_anxiety * (0.5 + anxiety_susceptibility) - self.anxiety_level
+            
+            anxiety_change += random.uniform(-5, 5)
+
+            self.anxiety_level = max(0, min(100, self.anxiety_level + anxiety_change))
+            
+            self.stress_level += self.anxiety_level * 0.1
+            self.anxiety_level += self.stress_level * 0.05
+            
+            self.stress_level = min(100, self.stress_level)
+            self.anxiety_level = min(100, self.anxiety_level)
+
+            self.memory.append({
+                'timestamp': len(self.memory),
+                'environment': environment.copy(),
+                'connections': list(self.social_connections),
+                'state': self.psych_state.to_dict(),
+                'stress': self.stress_level,
+                'anxiety': self.anxiety_level,
+                'adaptation': self.adaptation_score
             })
 
     def share_resources(self) -> int:
@@ -356,3 +410,7 @@ Survey Questions:
         for agent in group["participants"]:
             if not hasattr(agent, 'social_connections') or not isinstance(agent.social_connections, set):
                 agent.social_connections = set()
+
+    def reduce_anxiety(self, amount: float):
+        """Reduce anxiety by the specified amount"""
+        self.anxiety_level = max(0, self.anxiety_level - amount)

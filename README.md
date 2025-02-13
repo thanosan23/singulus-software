@@ -4,7 +4,14 @@ NSS Space Settlement Contest 2025
 ## Agent Experiment
 This experiment simulates the psychology of humans in space.
 
-To run the agent experiment, run the following code in the terminal:
+To run the experiment, create a file called `.env` and copy and paste the following:
+```
+OPENAI_API_KEY=<enter API key here>
+```
+
+Optionally, you can set up a [Weights and Biases](https://wandb.ai/) to monitor training.
+
+Run the following code in the terminal:
 ```
 cd agent_experiment
 pip install -r requirements.txt
