@@ -75,7 +75,6 @@ class IsolationEffectsVisualizer:
         ax.set_xlabel("Solution Type")
         ax.set_ylabel("Improvement (%)")
         
-        # Add ANOVA results
         f_stat, p_val = stats.f_oneway(*[
             df[df["Solution"] == sol]["Value"].values 
             for sol in df["Solution"].unique()
@@ -94,7 +93,6 @@ class IsolationEffectsVisualizer:
 
     def plot_final_isolation_analysis(self, baseline_results: Dict, solution_results: Dict):
         """Create final publication-quality graphs with [FINAL] prefix"""
-        # First set of graphs - Isolation effects
         fig1, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 6))
         fig1.suptitle("[FINAL] Isolation Effects Analysis", fontsize=16, y=1.05)
         
@@ -112,7 +110,6 @@ class IsolationEffectsVisualizer:
             ax.set_title(f"[FINAL] {metric} in Isolation")
             ax.set_ylabel(ylabel)
             
-            # Add statistical testing
             f_stat, p_val = stats.f_oneway(*[
                 baseline_data[baseline_data["Group"] == group][metric].values 
                 for group in ["Group A", "Group B", "Group C", "Group D"]
@@ -122,7 +119,6 @@ class IsolationEffectsVisualizer:
                    transform=ax.transAxes,
                    bbox=dict(facecolor='white', alpha=0.8))
             
-            # Add group labels explanation
             if ax == ax1:
                 ax.text(-0.2, -0.15, 
                        "Group A: Confined with exit\nGroup B: Confined w/o exit\n" + 
@@ -135,7 +131,6 @@ class IsolationEffectsVisualizer:
                     dpi=300, bbox_inches='tight')
         plt.close()
 
-        # Second set of graphs - Solution impact
         fig2, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 6))
         fig2.suptitle("[FINAL] Solution Implementation Impact", fontsize=16, y=1.05)
         
@@ -152,7 +147,6 @@ class IsolationEffectsVisualizer:
             ax.set_title(f"[FINAL] {metric} Before/After Solutions")
             ax.set_ylabel(ylabel)
             
-            # Add statistical testing for each group
             for group in ["Group A", "Group B", "Group C", "Group D"]:
                 before = baseline_data[baseline_data["Group"] == group][metric]
                 after = solution_data[solution_data["Group"] == group][metric]
@@ -193,7 +187,6 @@ class IsolationEffectsVisualizer:
         ax.set_title(title)
         ax.set_ylabel(metric)
         
-        # Add statistical test
         f_stat, p_val = stats.f_oneway(*[
             data[data["Group"] == group][metric].values 
             for group in ["Group A", "Group B", "Group C", "Group D"]
@@ -214,7 +207,6 @@ class IsolationEffectsVisualizer:
         sns.boxplot(data=combined, x="Group", y=metric, hue="Condition", ax=ax)
         ax.set_title(title)
         
-        # Add statistical testing
         for group in ["Group A", "Group B", "Group C", "Group D"]:
             before = before_data[before_data["Group"] == group][metric]
             after = after_data[after_data["Group"] == group][metric]
