@@ -45,17 +45,16 @@ class ExperimentController:
         self.pbar = None
         print("Initializing Space Psychology Experiment Controller...")
         self.simulation_config = {}
-        self.simulation_config["improvement_factor"] = self.get_dynamic_param(
-            "improvement_factor", 0.3)
+        self.simulation_config["improvement_factor"] = self.get_dynamic_param("improvement_factor", 0.3)
         self.simulation_config["phase_durations"] = {
             key: self.get_dynamic_param(f"phase_{key}", value)
             for key, value in {
-                "briefing": 0.1,
-                "adaptation": 0.5,
-                "resource_crisis": 1.0,
-                "social_phase": 0.5,
-                "major_crisis": 2.0,
-                "resolution": 1.0,
+                "briefing": 0.1,  # 0.1 years = ~1.2 months
+                "adaptation": 0.5,  # 6 months
+                "resource_crisis": 1.0,  # 1 year
+                "social_phase": 0.5,  # 6 months
+                "major_crisis": 2.0,  # 2 years
+                "resolution": 1.0,  # 1 year
             }.items()
         }
         self.phase_durations = self.simulation_config["phase_durations"]
@@ -146,8 +145,7 @@ class ExperimentController:
         total_participants = len(self.groups) * self.participants_per_group
         print("\n=== Starting Space Psychology Experiment ===")
         print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"Total participants: {total_participants} ({
-              self.participants_per_group} per group)")
+        print(f"Total participants: {total_participants} ({self.participants_per_group} per group)")
         print("Initializing experiment setup...")
         self.initialize_experiment()
 
@@ -155,8 +153,7 @@ class ExperimentController:
         with tqdm(total=total_participants, desc="Pre-Surveys") as pbar:
             for group in self.groups:
                 for agent in group["participants"]:
-                    responses = agent.take_survey(
-                        self.survey_manager.get_survey(SurveyType.PRE))
+                    responses = agent.take_survey(self.survey_manager.get_survey(SurveyType.PRE))
                     agent.pre_survey = responses
                     pbar.update(1)
 
@@ -166,7 +163,7 @@ class ExperimentController:
             ("adaptation", timedelta(days=int(0.5 * 365))),
             ("resource_crisis", timedelta(days=int(1.0 * 365))),
             ("social_phase", timedelta(days=int(0.5 * 365))),
-            ("major_crisis", timedelta(days=int(2.0 * 365))),
+            ("major_crisis", timedelta(days=int(2.0 * 365))), 
             ("resolution", timedelta(days=int(1.0 * 365)))
         ]
 
@@ -188,10 +185,9 @@ class ExperimentController:
 
         print("\n4. Processing Results")
         detailed_results = self.export_results(silent=True)
-
+        
         print("\nGenerating analyses...")
-        self._create_visualization(
-            Path("experiment_results"), detailed_results)
+        self._create_visualization(Path("experiment_results"), detailed_results)
 
         print("\n=== Experiment Completed ===")
         return detailed_results
@@ -204,10 +200,8 @@ class ExperimentController:
         elapsed = (datetime.now() - phase_start).total_seconds() / 60
         window = 37
         if elapsed < window:
-            stress_multiplier = self.get_dynamic_param(
-                "physical_stress_reduction", 0.3)
-            adaptation_increment = self.get_dynamic_param(
-                "physical_adaptation_boost", 10)
+            stress_multiplier = self.get_dynamic_param("physical_stress_reduction", 0.3)
+            adaptation_increment = self.get_dynamic_param("physical_adaptation_boost", 10)
             factor = (window - elapsed) / window
             agent.stress_level *= (1 - stress_multiplier * factor)
             agent.adaptation_score += adaptation_increment * factor
@@ -258,11 +252,9 @@ class ExperimentController:
                     reward = self._calculate_reward(agent, action, environment)
 
                     next_state = state.copy()
-                    next_state.update(self._apply_action(
-                        agent, action, environment))
+                    next_state.update(self._apply_action(agent, action, environment))
 
-                    agent.rl_brain.remember(
-                        state, action, reward, next_state, False)
+                    agent.rl_brain.remember(state, action, reward, next_state, False)
                     agent.rl_brain._learn_from_memory()
 
                     if self.wandb_logging:
@@ -592,12 +584,9 @@ class ExperimentController:
         print("4. Generating visualizations...")
         self._create_visualization(results_dir, detailed_results)
         baseline_results = detailed_results
-        solution_results = {
-            **detailed_results, "groups": [dict(g) for g in detailed_results.get("groups", [])]}
-        solution_results = self._analyze_solution_impact(
-            baseline_results, solution_results)
-        self._create_aggregate_visualizations(
-            results_dir, baseline_results, solution_results)
+        solution_results = {**detailed_results, "groups": [dict(g) for g in detailed_results.get("groups", [])]}
+        solution_results = self._analyze_solution_impact(baseline_results, solution_results)
+        self._create_aggregate_visualizations(results_dir, baseline_results, solution_results)
 
         print("\nKey Statistics:")
         for group in detailed_results["groups"]:
@@ -613,15 +602,14 @@ class ExperimentController:
         """Generate comprehensive visualizations"""
         from visualization.metric_plotter import MetricPlotter
         from scipy import stats
-
+        
         plotter = MetricPlotter(results_dir)
         try:
             plotter.plot_all_metrics(results)
-
+            
             if self.enable_solution:
-                self._create_solution_effectiveness_analysis(
-                    results_dir, results)
-
+                self._create_solution_effectiveness_analysis(results_dir, results)
+                
         except Exception as e:
             print(f"Error in visualization creation: {str(e)}")
             print(f"Line number: {e.__traceback__.tb_lineno}")
@@ -640,8 +628,7 @@ class ExperimentController:
         plt.ylabel("Stress Level")
 
         plt.tight_layout()
-        save_path = results_dir / \
-            f"basic_analysis_{self.start_time.strftime('%Y%m%d_%H%M%S')}.png"
+        save_path = results_dir / f"basic_analysis_{self.start_time.strftime('%Y%m%d_%H%M%S')}.png"
         plt.savefig(save_path, bbox_inches='tight')
         plt.close()
 
@@ -999,13 +986,13 @@ class ExperimentController:
     def _create_stress_timeline(self, results_dir: Path, results: Dict):
         """Create a visualization of stress levels over time with year-based x-axis"""
         plt.figure(figsize=(15, 8))
-
-        phases = ['Initial', 'Briefing\n(0.1y)', 'Adaptation\n(0.5y)',
-                  'Resource Crisis\n(1y)', 'Social Phase\n(0.5y)',
-                  'Major Crisis\n(2y)', 'Resolution\n(1y)']
-        total_years = 5.1
+        
+        phases = ['Initial', 'Briefing\n(0.1y)', 'Adaptation\n(0.5y)', 
+                 'Resource Crisis\n(1y)', 'Social Phase\n(0.5y)', 
+                 'Major Crisis\n(2y)', 'Resolution\n(1y)']
+        total_years = 5.1  # Total duration in years
         x_points = np.linspace(0, total_years, len(phases))
-
+        
         for group in results["groups"]:
             stress_trend = [
                 35,
@@ -1090,11 +1077,10 @@ class ExperimentController:
         self.initialize_experiment()
         self.run_experiment()
         baseline_results = self.export_results(silent=True)
-
-        solutions = ["adaptive_architecture",
-                     "physical_integration", "therapeutic_integration"]
+        
+        solutions = ["adaptive_architecture", "physical_integration", "therapeutic_integration"]
         results_by_solution = {}
-
+        
         for sol in solutions:
             print(f"\nRunning simulation with solution: {sol}")
             self.solution_type = sol
@@ -1103,17 +1089,15 @@ class ExperimentController:
             self.run_experiment()
             sim_results = self.export_results(silent=True)
             results_by_solution[sol] = sim_results
-
+        
         results_dir = Path("experiment_results")
         results_dir.mkdir(exist_ok=True)
-
-        self._export_detailed_csv(
-            baseline_results, results_by_solution, results_dir)
-
+        
+        self._export_detailed_csv(baseline_results, results_by_solution, results_dir)
+        
         from visualization.isolation_effects import IsolationEffectsVisualizer
         visualizer = IsolationEffectsVisualizer(results_dir)
-        visualizer.plot_final_isolation_analysis(
-            baseline_results, results_by_solution["adaptive_architecture"])
+        visualizer.plot_final_isolation_analysis(baseline_results, results_by_solution["adaptive_architecture"])
         visualizer.plot_solution_effectiveness(results_by_solution)
 
     def _run_simulation_batch(self):
@@ -1144,8 +1128,7 @@ class ExperimentController:
             if i < len(baseline_groups):
                 baseline_stress = baseline_groups[i].get("avg_stress", 0)
                 group["avg_stress_baseline"] = baseline_stress
-                group["avg_stress"] = baseline_stress * \
-                    (1 - improvement_factor)
+                group["avg_stress"] = baseline_stress * (1 - improvement_factor)
         return solution_results
 
     def _create_aggregate_visualizations(self, results_dir: Path, baseline_results: Dict, solution_results: Dict):
@@ -1208,7 +1191,7 @@ class ExperimentController:
         """Apply solution by simulating its actual effects"""
         if not self.enable_solution:
             return
-
+            
         try:
             for agent in group["participants"]:
                 if not hasattr(agent, 'social_connections') or agent.social_connections is None:
@@ -1232,8 +1215,7 @@ class ExperimentController:
                 elif self.solution_type == "therapeutic_integration":
                     self._simulate_therapeutic_integration(agent, group)
                 else:
-                    raise ValueError(f"Unsupported solution type: {
-                                     self.solution_type}")
+                    raise ValueError(f"Unsupported solution type: {self.solution_type}")
 
                 current_state = {
                     'stress_level': agent.stress_level,
@@ -1243,8 +1225,7 @@ class ExperimentController:
                 }
 
                 if hasattr(agent, 'rl_brain'):
-                    reward = self._calculate_actual_impact(
-                        original_state, current_state)
+                    reward = self._calculate_actual_impact(original_state, current_state)
                     agent.rl_brain.learn(current_state, reward)
 
         except Exception as e:
@@ -1253,29 +1234,28 @@ class ExperimentController:
 
     def _simulate_adaptive_architecture(self, agent: AIAgent, group: Dict):
         """Simulate actual effects of adaptive architecture with enhanced research-based outcomes"""
-        current_density = len([a for a in group["participants"]
-                              if a.stress_level > 50]) / len(group["participants"])
-
+        current_density = len([a for a in group["participants"] if a.stress_level > 50]) / len(group["participants"])
+        
         agent.initial_stress_level = agent.stress_level
         agent.initial_adaptation_score = agent.adaptation_score
         agent.initial_social_connections = len(agent.social_connections)
-
+        
         if current_density > 0.7:
             personal_space_factor = random.uniform(1.4, 2.0)
             agent.stress_level *= (1 / personal_space_factor)
-
+            
             if random.random() < 0.6:
                 agent.adaptation_score += random.uniform(10, 20)
-
+        
         time_of_day = random.uniform(0, 24)
         if 22 <= time_of_day or time_of_day <= 6:
             agent.stress_level *= random.uniform(0.7, 0.85)
             agent.adaptation_score += random.uniform(5, 10)
-
+        
         if current_density > 0.7:
             anxiety_reduction = random.uniform(5, 15)
             agent.reduce_anxiety(anxiety_reduction)
-
+        
         if 22 <= time_of_day or time_of_day <= 6:
             agent.reduce_anxiety(random.uniform(3, 8))
 
@@ -1284,23 +1264,22 @@ class ExperimentController:
         agent.initial_stress_level = agent.stress_level
         agent.initial_adaptation_score = agent.adaptation_score
         agent.initial_social_connections = len(agent.social_connections)
-
+        
         if random.random() < 0.75:
             exercise_benefit = random.uniform(10, 25)
             agent.stress_level = max(0, agent.stress_level - exercise_benefit)
             agent.adaptation_score += random.uniform(8, 15)
-
+        
         if random.random() < 0.65:
             nature_benefit = random.uniform(8, 18)
             agent.stress_level = max(0, agent.stress_level - nature_benefit)
-
-        nearby_agents = [a for a in group["participants"]
-                         if a != agent and random.random() < 0.5]
+        
+        nearby_agents = [a for a in group["participants"] if a != agent and random.random() < 0.5]
         for other in nearby_agents:
             if random.random() < 0.6:
                 connection_id = f"physical_interaction_{agent.id}_{other.id}"
                 agent.social_connections.add(connection_id)
-
+        
         if random.random() < 0.75:
             anxiety_reduction = random.uniform(8, 20)
             agent.reduce_anxiety(anxiety_reduction)
@@ -1310,25 +1289,24 @@ class ExperimentController:
         agent.initial_stress_level = agent.stress_level
         agent.initial_adaptation_score = agent.adaptation_score
         agent.initial_social_connections = len(agent.social_connections)
-
+        
         if random.random() < 0.7:
             session_effectiveness = random.uniform(0.75, 0.98)
             stress_reduction = agent.stress_level * session_effectiveness * 0.5
             agent.stress_level = max(0, agent.stress_level - stress_reduction)
             agent.adaptation_score += random.uniform(5, 12)
-
+        
         if random.random() < 0.55:
-            participants = random.sample([a for a in group["participants"] if a != agent],
-                                         k=min(5, len(group["participants"])-1))
-
+            participants = random.sample([a for a in group["participants"] if a != agent], 
+                                      k=min(5, len(group["participants"])-1))
+            
             session_success = random.random()
             if session_success > 0.25:
                 for participant in participants:
-                    connection_id = f"therapy_group_{
-                        agent.id}_{participant.id}"
+                    connection_id = f"therapy_group_{agent.id}_{participant.id}"
                     agent.social_connections.add(connection_id)
                 agent.adaptation_score += random.uniform(10, 20)
-
+        
         if random.random() < 0.7:
             anxiety_reduction = agent.anxiety_level * random.uniform(0.3, 0.5)
             agent.reduce_anxiety(anxiety_reduction)
@@ -1336,25 +1314,25 @@ class ExperimentController:
     def _calculate_actual_impact(self, original_state: Dict, current_state: Dict) -> float:
         """Calculate actual impact based on state changes using consistent keys"""
         stress_change = (
-            (original_state['stress_level'] - current_state['stress_level']) /
+            (original_state['stress_level'] - current_state['stress_level']) / 
             original_state['stress_level']
         ) if original_state['stress_level'] > 0 else 0
-
+        
         connection_change = (
-            (current_state['social_connections'] - original_state['social_connections']) /
+            (current_state['social_connections'] - original_state['social_connections']) / 
             (original_state['social_connections'] + 1)
         )
-
+        
         adaptation_change = (
-            (current_state['adaptation_score'] - original_state['adaptation_score']) /
+            (current_state['adaptation_score'] - original_state['adaptation_score']) / 
             (original_state['adaptation_score'] + 1)
         )
-
+        
         anxiety_change = (
-            (original_state.get('anxiety_level', 0) - current_state.get('anxiety_level', 0)) /
+            (original_state.get('anxiety_level', 0) - current_state.get('anxiety_level', 0)) / 
             (original_state.get('anxiety_level', 1))
         ) if original_state.get('anxiety_level', 0) > 0 else 0
-
+        
         return (
             stress_change * 30 +
             anxiety_change * 30 +
@@ -1363,85 +1341,78 @@ class ExperimentController:
         )
 
     def _calculate_stress_reduction(self, baseline: Dict, solution: Dict) -> float:
-        baseline_stress = np.mean([g["avg_stress"]
-                                  for g in baseline["groups"]])
-        solution_stress = np.mean([g["avg_stress"]
-                                  for g in solution["groups"]])
+        baseline_stress = np.mean([g["avg_stress"] for g in baseline["groups"]])
+        solution_stress = np.mean([g["avg_stress"] for g in solution["groups"]])
         return ((baseline_stress - solution_stress) / baseline_stress) * 100 if baseline_stress > 0 else 0
 
     def _calculate_anxiety_reduction(self, baseline: Dict, solution: Dict) -> float:
-        baseline_anxiety = np.mean([p.get("anxiety_level", 0)
-                                    for g in baseline["groups"]
-                                    for p in g["participants"]])
-        solution_anxiety = np.mean([p.get("anxiety_level", 0)
-                                    for g in solution["groups"]
-                                    for p in g["participants"]])
+        baseline_anxiety = np.mean([p.get("anxiety_level", 0) 
+                                  for g in baseline["groups"] 
+                                  for p in g["participants"]])
+        solution_anxiety = np.mean([p.get("anxiety_level", 0) 
+                                  for g in solution["groups"] 
+                                  for p in g["participants"]])
         return ((baseline_anxiety - solution_anxiety) / baseline_anxiety) * 100 if baseline_anxiety > 0 else 0
 
     def _calculate_performance_improvement(self, baseline: Dict, solution: Dict) -> float:
-        baseline_perf = np.mean([p.get("adaptation_score", 0)
-                                 for g in baseline["groups"]
-                                 for p in g["participants"]])
-        solution_perf = np.mean([p.get("adaptation_score", 0)
-                                 for g in solution["groups"]
-                                 for p in g["participants"]])
+        baseline_perf = np.mean([p.get("adaptation_score", 0) 
+                               for g in baseline["groups"] 
+                               for p in g["participants"]])
+        solution_perf = np.mean([p.get("adaptation_score", 0) 
+                               for g in solution["groups"] 
+                               for p in g["participants"]])
         return ((solution_perf - baseline_perf) / baseline_perf) * 100 if baseline_perf > 0 else 0
 
     def _export_detailed_csv(self, baseline_results: Dict, solution_results: Dict, results_dir: Path):
         """Export detailed metrics to CSV files with normalized metrics and proper anxiety values"""
         isolation_data = []
         for group in baseline_results.get("groups", []):
-            group_label = self._get_group_label(
-                group["space_type"], group["has_exit"])
+            group_label = self._get_group_label(group["space_type"], group["has_exit"])
             for participant in group.get("participants", []):
                 is_confined = group["space_type"] == "confined"
                 has_exit = group["has_exit"]
                 base_anxiety = 30 if is_confined else 20
                 if not has_exit:
                     base_anxiety *= 1.2
-
+                
                 stress = participant.get("final_stress", 0)
-                anxiety = participant.get(
-                    "anxiety_level", base_anxiety + (stress * 0.3))
-                performance = self._normalize_performance_score(
-                    participant.get("adaptation_score", 0))
-
+                anxiety = participant.get("anxiety_level", base_anxiety + (stress * 0.3))
+                performance = self._normalize_performance_score(participant.get("adaptation_score", 0))
+                
                 isolation_data.append({
                     "Group": group_label,
                     "Stress": stress,
                     "Anxiety": anxiety,
                     "Performance": performance * 0.7
                 })
-
+        
         isolation_df = pd.DataFrame(isolation_data)
         isolation_df.to_csv(results_dir / "isolation_metrics.csv", index=False)
-
+        
         solution_data = []
         for solution_type, results in solution_results.items():
             for group in results.get("groups", []):
-                group_label = self._get_group_label(
-                    group["space_type"], group["has_exit"])
+                group_label = self._get_group_label(group["space_type"], group["has_exit"])
                 for participant in group.get("participants", []):
                     is_confined = group["space_type"] == "confined"
                     has_exit = group["has_exit"]
                     base_anxiety = 25 if is_confined else 15
                     if not has_exit:
                         base_anxiety *= 1.1
-
+                    
                     stress = participant.get("final_stress", 0)
-
+                    
                     if solution_type == "adaptive_architecture":
                         anxiety_reduction = 0.4
                     elif solution_type == "physical_integration":
                         anxiety_reduction = 0.5
                     else:
                         anxiety_reduction = 0.6
-
-                    anxiety = participant.get("anxiety_level",
-                                              base_anxiety + (stress * 0.3 * (1 - anxiety_reduction)))
-                    performance = self._normalize_performance_score(
-                        participant.get("adaptation_score", 0))
-
+                        
+                    anxiety = participant.get("anxiety_level", 
+                                           base_anxiety + (stress * 0.3 * (1 - anxiety_reduction)))
+                    performance = self._normalize_performance_score(participant.get("adaptation_score", 0))
+                    
                     solution_data.append({
                         "Solution": solution_type,
                         "Group": group_label,
@@ -1449,7 +1420,7 @@ class ExperimentController:
                         "Anxiety": anxiety,
                         "Performance": performance * 1.2
                     })
-
+        
         solution_df = pd.DataFrame(solution_data)
         solution_df.to_csv(results_dir / "solution_metrics.csv", index=False)
 
@@ -1466,67 +1437,62 @@ class ExperimentController:
         else:
             min_score, max_score = 0, 200
             normalized = ((score - min_score) / (max_score - min_score)) * 100
-
+        
         if not self.enable_solution:
             normalized *= 0.7
         else:
-            normalized *= 1.2
-
+            normalized *= 1.2 
+            
         return max(0, min(100, normalized))
 
     def _get_group_label(self, space_type: str, has_exit: bool) -> str:
         """Get standardized group label"""
         if space_type == "confined":
             return "Group A" if has_exit else "Group B"
-        else:
+        else: 
             return "Group C" if has_exit else "Group D"
 
     def _create_solution_effectiveness_analysis(self, results_dir: Path, results: Dict):
         """Create visualization of solution effectiveness"""
         plt.figure(figsize=(12, 8))
-
+        
         solutions_data = []
         for group in results.get("groups", []):
-            group_label = self._get_group_label(
-                group["space_type"], group["has_exit"])
+            group_label = self._get_group_label(group["space_type"], group["has_exit"])
             solutions_data.append({
                 "Group": group_label,
                 "Stress Reduction": self._calculate_stress_reduction({"groups": [group]}, results),
                 "Anxiety Reduction": self._calculate_anxiety_reduction({"groups": [group]}, results),
                 "Performance Improvement": self._calculate_performance_improvement({"groups": [group]}, results)
             })
-
+        
         df = pd.DataFrame(solutions_data)
-        melted_df = pd.melt(
-            df, id_vars=["Group"], var_name="Metric", value_name="Percentage")
-
+        melted_df = pd.melt(df, id_vars=["Group"], var_name="Metric", value_name="Percentage")
+        
         sns.barplot(data=melted_df, x="Group", y="Percentage", hue="Metric")
         plt.title("[FINAL] Solution Effectiveness Analysis")
         plt.xlabel("Group")
         plt.ylabel("Improvement (%)")
-
+        
         if len(df) >= 2:
             f_stat, p_val = stats.f_oneway(
                 df["Stress Reduction"],
                 df["Anxiety Reduction"],
                 df["Performance Improvement"]
             )
-            plt.text(0.02, 0.98,
-                     f'ANOVA Results:\nF = {f_stat:.2f}\np = {p_val:.2e}',
-                     transform=plt.gca().transAxes,
-                     bbox=dict(facecolor='white', alpha=0.8),
-                     verticalalignment='top')
-
+            plt.text(0.02, 0.98, 
+                    f'ANOVA Results:\nF = {f_stat:.2f}\np = {p_val:.2e}',
+                    transform=plt.gca().transAxes,
+                    bbox=dict(facecolor='white', alpha=0.8),
+                    verticalalignment='top')
+        
         plt.xticks(rotation=45)
         plt.tight_layout()
-        plt.savefig(results_dir / 'FINAL_solution_effectiveness.png',
-                    dpi=300, bbox_inches='tight')
+        plt.savefig(results_dir / 'FINAL_solution_effectiveness.png', dpi=300, bbox_inches='tight')
         plt.close()
-
+        
         solution_metrics_df = pd.DataFrame(solutions_data)
-        solution_metrics_df.to_csv(
-            results_dir / 'solution_effectiveness_metrics.csv', index=False)
-
+        solution_metrics_df.to_csv(results_dir / 'solution_effectiveness_metrics.csv', index=False)
 
 def test_solution_effectiveness():
     """
@@ -1535,8 +1501,7 @@ def test_solution_effectiveness():
     from solution_tester import SolutionTester
     from scipy.stats import f_oneway
     num_runs = 30
-    solutions = ["adaptive_architecture",
-                 "physical_integration", "therapeutic_integration"]
+    solutions = ["adaptive_architecture", "physical_integration", "therapeutic_integration"]
     performance_data = {sol: [] for sol in solutions}
 
     for _ in range(num_runs):
@@ -1545,8 +1510,7 @@ def test_solution_effectiveness():
             performance_data[sol].append(tester.results[sol]["performance"])
 
     stat, p_val = f_oneway(*(performance_data[sol] for sol in solutions))
-    print(
-        "ANOVA Test across solutions -> F-statistic: {:.3f}, p-value: {:.3e}".format(stat, p_val))
+    print("ANOVA Test across solutions -> F-statistic: {:.3f}, p-value: {:.3e}".format(stat, p_val))
 
 
 if __name__ == "__main__":

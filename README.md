@@ -28,3 +28,7 @@ cd vibration_control
 pip install -r requirements.txt
 python main.py
 ```
+## Laser Communication
+Circuit building instructions can be found [here](https://www.instructables.com/Two-Way-Morse-Code-Communication-System/).
+
+Once the laser communication system is built, go into the `laser_morse_comms` and upload `laser_communication.ino`
