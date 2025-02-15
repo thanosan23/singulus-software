@@ -19,7 +19,7 @@ python main.py
 ```
 
 ### Results
-The results from the agent experiment are as follows:
+Below are the results of the agent experiment. The graphs below measure stress, anxiety, and performance among the AI agents.
 
 Before the Implementation of Any Solutions:
 ![before](figures/before.png)
