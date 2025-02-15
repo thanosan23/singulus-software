@@ -18,6 +18,21 @@ pip install -r requirements.txt
 python main.py
 ```
 
+### Results
+The results from the agent experiment are as follows:
+
+Before the Implementation of Any Solutions:
+![before](figures/before.png)
+
+Implementation of Adaptive Architecture:
+![adaptive architecture](figures/adaptive_architecture.png)
+
+Implementation of Physical Integration:
+![physical integration](figures/physical_integration.png)
+
+Implementation of Therapeutic Integration:
+![therapeutic integration](figures/therapeutic_integration.png)
+
 ## Robot
 Once the robot system is built and connected as instructed, go into the `robot` folder and upload `robotic_arm.ino` to the microcontroller.
 
